@@ -229,6 +229,69 @@ export const updateSystemConfig = async (configKey, updateData) => {
 };
 
 /**
+ * Get a specific configuration
+ */
+export const getSystemConfig = async (configKey) => {
+  try {
+    const response = await fetch(`${BACKEND_URL}/api/admin/config/${configKey}`, {
+      headers: {
+        ...getAuthHeader(),
+        'Content-Type': 'application/json',
+      },
+    });
+
+    await handleApiError(response);
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching config:', error);
+    throw error;
+  }
+};
+
+/**
+ * Create new system configuration
+ */
+export const createSystemConfig = async (configData) => {
+  try {
+    const response = await fetch(`${BACKEND_URL}/api/admin/config`, {
+      method: 'POST',
+      headers: {
+        ...getAuthHeader(),
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(configData),
+    });
+
+    await handleApiError(response);
+    return await response.json();
+  } catch (error) {
+    console.error('Error creating config:', error);
+    throw error;
+  }
+};
+
+/**
+ * Delete system configuration
+ */
+export const deleteSystemConfig = async (configKey) => {
+  try {
+    const response = await fetch(`${BACKEND_URL}/api/admin/config/${configKey}`, {
+      method: 'DELETE',
+      headers: {
+        ...getAuthHeader(),
+        'Content-Type': 'application/json',
+      },
+    });
+
+    await handleApiError(response);
+    return await response.json();
+  } catch (error) {
+    console.error('Error deleting config:', error);
+    throw error;
+  }
+};
+
+/**
  * Get dashboard statistics
  */
 export const getDashboardStats = async () => {
@@ -827,4 +890,6 @@ export default {
   checkBackendHealth,
   batchGeocodeAddresses,
 };
+
+
 

@@ -3,19 +3,21 @@ import { toast } from 'react-toastify';
 import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
 import { LoadingSpinner } from '../components/common/LoadingSpinner';
-import { getSystemConfigs, updateSystemConfig } from '../services/backendApi';
+import { getSystemConfigs, updateSystemConfig, createSystemConfig, deleteSystemConfig } from '../services/backendApi';
 
 export const SystemConfig = () => {
   const [configs, setConfigs] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [editingKey, setEditingKey] = useState(null);
+  const [editingId, setEditingId] = useState(null);
   const [editValue, setEditValue] = useState('');
   const [saving, setSaving] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
 
   const fetchConfigs = async () => {
     try {
       setIsLoading(true);
       const data = await getSystemConfigs();
+      // Filter out sensitive configs from display (but admin can see them)
       setConfigs(data);
     } catch (error) {
       console.error('Error fetching configs:', error);
@@ -30,51 +32,59 @@ export const SystemConfig = () => {
   }, []);
 
   const handleEdit = (config) => {
-    setEditingKey(config.key);
-    setEditValue(config.value);
+    setEditingId(config.id);
+    setEditValue(config.config_value);
   };
 
   const handleCancel = () => {
-    setEditingKey(null);
+    setEditingId(null);
     setEditValue('');
   };
 
-  const handleSave = async (key) => {
+  const handleSave = async (configKey) => {
     try {
       setSaving(true);
-      await updateSystemConfig(key, editValue);
+      await updateSystemConfig(configKey, { config_value: editValue });
       toast.success('Configuration updated successfully');
-      setEditingKey(null);
+      setEditingId(null);
       fetchConfigs();
     } catch (error) {
       console.error('Error updating config:', error);
-      toast.error('Failed to update configuration');
+      toast.error(error.message || 'Failed to update configuration');
     } finally {
       setSaving(false);
     }
   };
 
-  const getConfigDescription = (key) => {
-    const descriptions = {
-      'vendor_registration_fee': 'One-time fee vendors pay after approval to activate their account',
-      'booking_convenience_fee': 'Platform fee added to each booking (in addition to service price)',
-      'rm_score_per_approval': 'Points awarded to RM when their submitted salon is approved',
-      'rm_score_per_completed_booking': 'Points awarded to RM for each completed booking at their salons',
-      'free_services_limit': 'Maximum number of free services a vendor can offer (0 = unlimited)',
-      'staff_limit': 'Maximum number of staff members per salon (0 = unlimited)',
-    };
-    return descriptions[key] || '';
+  const handleDelete = async (configKey) => {
+    if (!window.confirm(`Are you sure you want to delete "${configKey}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      await deleteSystemConfig(configKey);
+      toast.success('Configuration deleted successfully');
+      fetchConfigs();
+    } catch (error) {
+      console.error('Error deleting config:', error);
+      toast.error(error.message || 'Failed to delete configuration');
+    }
   };
 
   const getConfigCategory = (key) => {
-    if (key.includes('fee')) return 'Payments';
+    if (key.includes('fee') || key.includes('commission')) return 'Payments';
     if (key.includes('rm_score')) return 'RM Scoring';
-    if (key.includes('limit')) return 'Limits';
+    if (key.includes('limit') || key.includes('max') || key.includes('window')) return 'Limits & Rules';
+    if (key.includes('razorpay') || key.includes('key') || key.includes('secret')) return '🔒 Sensitive';
     return 'General';
   };
 
+  const isSensitiveConfig = (key) => {
+    return key.includes('key') || key.includes('secret') || key.includes('password');
+  };
+
   const groupedConfigs = configs.reduce((acc, config) => {
-    const category = getConfigCategory(config.key);
+    const category = getConfigCategory(config.config_key);
     if (!acc[category]) acc[category] = [];
     acc[category].push(config);
     return acc;
@@ -94,9 +104,12 @@ export const SystemConfig = () => {
         <div>
           <h1 className="text-3xl font-bold text-gray-900">System Configuration</h1>
           <p className="text-gray-600 mt-1">
-            Manage dynamic fees, RM scoring, and platform limits
+            Manage fees, limits, and platform settings
           </p>
         </div>
+        <Button onClick={() => setShowCreateModal(true)}>
+          + Add New Config
+        </Button>
       </div>
 
       {Object.entries(groupedConfigs).map(([category, categoryConfigs]) => (
@@ -113,9 +126,9 @@ export const SystemConfig = () => {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
                 </svg>
               )}
-              {category === 'Limits' && (
-                <svg className="w-5 h-5 mr-2 text-orange-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              {category.includes('Sensitive') && (
+                <svg className="w-5 h-5 mr-2 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                 </svg>
               )}
               {category}
@@ -124,21 +137,34 @@ export const SystemConfig = () => {
             <div className="space-y-4">
               {categoryConfigs.map((config) => (
                 <div
-                  key={config.key}
-                  className="border border-gray-200 rounded-lg p-4 hover:border-blue-300 transition-colors"
+                  key={config.id}
+                  className={`border rounded-lg p-4 hover:border-blue-300 transition-colors ${
+                    !config.is_active ? 'opacity-50 bg-gray-50' : 'border-gray-200'
+                  }`}
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
-                      <h3 className="font-medium text-gray-900 mb-1">
-                        {config.key.split('_').map(word => 
-                          word.charAt(0).toUpperCase() + word.slice(1)
-                        ).join(' ')}
-                      </h3>
-                      <p className="text-sm text-gray-600 mb-3">
-                        {getConfigDescription(config.key)}
-                      </p>
+                      <div className="flex items-center gap-2 mb-1">
+                        <h3 className="font-medium text-gray-900">
+                          {config.config_key}
+                        </h3>
+                        {!config.is_active && (
+                          <span className="px-2 py-0.5 text-xs bg-gray-200 text-gray-600 rounded">
+                            Inactive
+                          </span>
+                        )}
+                        <span className="px-2 py-0.5 text-xs bg-blue-100 text-blue-700 rounded">
+                          {config.config_type}
+                        </span>
+                      </div>
+                      
+                      {config.description && (
+                        <p className="text-sm text-gray-600 mb-3">
+                          {config.description}
+                        </p>
+                      )}
 
-                      {editingKey === config.key ? (
+                      {editingId === config.id ? (
                         <div className="flex items-center gap-3">
                           <input
                             type="text"
@@ -148,7 +174,7 @@ export const SystemConfig = () => {
                             placeholder="Enter value"
                           />
                           <Button
-                            onClick={() => handleSave(config.key)}
+                            onClick={() => handleSave(config.config_key)}
                             disabled={saving}
                             size="sm"
                           >
@@ -167,9 +193,7 @@ export const SystemConfig = () => {
                         <div className="flex items-center gap-3">
                           <div className="px-4 py-2 bg-gray-50 rounded-md border border-gray-200">
                             <span className="font-mono text-lg font-semibold text-gray-900">
-                              {config.key.includes('fee') && '₹'}
-                              {config.value}
-                              {config.key.includes('score') && ' points'}
+                              {isSensitiveConfig(config.config_key) && config.config_value ? '••••••••' : config.config_value}
                             </span>
                           </div>
                           <Button
@@ -179,6 +203,12 @@ export const SystemConfig = () => {
                           >
                             Edit
                           </Button>
+                          <button
+                            onClick={() => handleDelete(config.config_key)}
+                            className="px-3 py-1 text-sm text-red-600 hover:bg-red-50 border border-red-300 rounded"
+                          >
+                            Delete
+                          </button>
                         </div>
                       )}
                     </div>
@@ -186,6 +216,7 @@ export const SystemConfig = () => {
 
                   <div className="mt-3 text-xs text-gray-500">
                     Last updated: {new Date(config.updated_at).toLocaleString()}
+                    {config.updated_by && ` by ${config.updated_by}`}
                   </div>
                 </div>
               ))}
@@ -194,25 +225,33 @@ export const SystemConfig = () => {
         </Card>
       ))}
 
+      {configs.length === 0 && !isLoading && (
+        <Card>
+          <div className="p-12 text-center">
+            <p className="text-gray-500">No configurations found. Create one to get started.</p>
+          </div>
+        </Card>
+      )}
+
       <Card>
         <div className="p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-3">💡 Configuration Tips</h2>
           <ul className="space-y-2 text-sm text-gray-600">
             <li className="flex items-start">
               <span className="text-blue-600 mr-2">•</span>
-              <span><strong>Registration Fee:</strong> Higher fees may reduce spam applications but could deter legitimate vendors</span>
+              <span><strong>Convenience Fee:</strong> Platform revenue per booking - balance profitability with competitiveness</span>
             </li>
             <li className="flex items-start">
               <span className="text-blue-600 mr-2">•</span>
-              <span><strong>Convenience Fee:</strong> This is your platform revenue per booking - balance between profitability and competitiveness</span>
+              <span><strong>RM Scoring:</strong> Higher scores incentivize quality relationships over quantity</span>
             </li>
             <li className="flex items-start">
               <span className="text-blue-600 mr-2">•</span>
-              <span><strong>RM Scoring:</strong> Higher approval scores incentivize quality over quantity. Booking completion scores reward long-term relationships</span>
+              <span><strong>Sensitive Values:</strong> API keys and secrets are masked in the UI for security</span>
             </li>
             <li className="flex items-start">
               <span className="text-blue-600 mr-2">•</span>
-              <span><strong>Limits:</strong> Set to 0 for unlimited. Use limits to control platform quality and prevent abuse</span>
+              <span><strong>Changes take effect immediately</strong> - be careful when modifying live configs</span>
             </li>
           </ul>
         </div>
