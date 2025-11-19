@@ -1,6 +1,5 @@
-import { useEffect, useState } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import { fetchServices, createService, updateService, deleteService } from '../store/slices/servicesSlice';
+import { useState } from 'react';
+import { useGetAllServicesQuery, useCreateServiceMutation, useUpdateServiceMutation, useDeleteServiceMutation } from '../services/api/serviceApi';
 import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
 import { Input, Textarea } from '../components/common/FormElements';
@@ -10,8 +9,12 @@ import { Badge } from '../components/common/Badge';
 import { toast } from 'react-toastify';
 
 export const Services = () => {
-  const dispatch = useDispatch();
-  const { services, isLoading } = useSelector((state) => state.services);
+  const { data: servicesData, isLoading } = useGetAllServicesQuery({});
+  const [createService] = useCreateServiceMutation();
+  const [updateService] = useUpdateServiceMutation();
+  const [deleteService] = useDeleteServiceMutation();
+
+  const services = servicesData?.data || [];
   
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -22,10 +25,6 @@ export const Services = () => {
     duration: '',
     price: '',
   });
-
-  useEffect(() => {
-    dispatch(fetchServices());
-  }, [dispatch]);
 
   const resetForm = () => {
     setForm({
@@ -38,7 +37,7 @@ export const Services = () => {
 
   const handleCreate = async () => {
     try {
-      await dispatch(createService(form)).unwrap();
+      await createService(form).unwrap();
       toast.success('Service created successfully');
       setIsCreateModalOpen(false);
       resetForm();
@@ -60,7 +59,7 @@ export const Services = () => {
 
   const handleUpdate = async () => {
     try {
-      await dispatch(updateService({ id: selectedService.id, updates: form })).unwrap();
+      await updateService({ serviceId: selectedService.id, data: form }).unwrap();
       toast.success('Service updated successfully');
       setIsEditModalOpen(false);
       resetForm();
@@ -72,7 +71,7 @@ export const Services = () => {
   const handleDelete = async (serviceId) => {
     if (window.confirm('Are you sure you want to delete this service?')) {
       try {
-        await dispatch(deleteService(serviceId)).unwrap();
+        await deleteService(serviceId).unwrap();
         toast.success('Service deleted successfully');
       } catch {
         toast.error('Failed to delete service');

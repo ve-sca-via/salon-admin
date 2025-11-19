@@ -15,7 +15,7 @@ export const userApi = createApi({
     // Get all users
     getAllUsers: builder.query({
       query: ({ role, limit = 50, page = 1 , is_active = true } = {}) => ({
-        url: '/api/admin/users',
+        url: '/api/v1/admin/users/',
         method: 'get',
         params: { role, limit, page , is_active},
       }),
@@ -32,7 +32,7 @@ export const userApi = createApi({
     // Get single user
     getUserById: builder.query({
       query: (userId) => ({
-        url: `/api/admin/users/${userId}`,
+        url: `/api/v1/admin/users/${userId}`,
         method: 'get',
       }),
       providesTags: (result, error, id) => [{ type: 'User', id }],
@@ -42,7 +42,7 @@ export const userApi = createApi({
     // Create user (admin)
     createUser: builder.mutation({
       query: (userData) => ({
-        url: '/api/admin/users',
+        url: '/api/v1/admin/users/',
         method: 'post',
         data: userData,
       }),
@@ -52,7 +52,7 @@ export const userApi = createApi({
     // Update user (admin)
     updateUser: builder.mutation({
       query: ({ userId, data }) => ({
-        url: `/api/admin/users/${userId}`,
+        url: `/api/v1/admin/users/${userId}`,
         method: 'put',
         data,
       }),
@@ -65,7 +65,7 @@ export const userApi = createApi({
     // Delete user (admin)
     deleteUser: builder.mutation({
       query: (userId) => ({
-        url: `/api/admin/users/${userId}`,
+        url: `/api/v1/admin/users/${userId}`,
         method: 'delete',
       }),
       invalidatesTags: [{ type: 'Users', id: 'LIST' }, 'DashboardStats'],
@@ -74,7 +74,7 @@ export const userApi = createApi({
     // Get all RMs
     getAllRMs: builder.query({
       query: ({ limit = 50, offset = 0 } = {}) => ({
-        url: '/api/admin/rms',
+        url: '/api/v1/admin/rms',
         method: 'get',
         params: { limit, offset },
       }),
@@ -85,7 +85,7 @@ export const userApi = createApi({
     // Update RM status
     updateRMStatus: builder.mutation({
       query: ({ rmId, isActive }) => ({
-        url: `/api/admin/rms/${rmId}/status`,
+        url: `/api/v1/admin/rms/${rmId}/status`,
         method: 'put',
         data: { is_active: isActive },
       }),

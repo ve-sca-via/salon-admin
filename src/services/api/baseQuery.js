@@ -49,7 +49,7 @@ const refreshAccessToken = async () => {
 
   try {
     // Use fetch for refresh to avoid interceptor recursion
-    const response = await fetch(`${BACKEND_URL}/api/auth/refresh`, {
+    const response = await fetch(`${BACKEND_URL}/api/v1/auth/refresh`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ refresh_token }),

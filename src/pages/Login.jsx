@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { setUser, setError } from '../store/slices/authSlice';
-import { login as loginApi } from '../services/backendApi';
+import { login as loginApi } from '../services/api/authApi';
 import { toast } from 'react-toastify';
 
 export const Login = () => {

@@ -132,8 +132,9 @@ export const PendingSalons = () => {
       cell: (row) => (
         <div>
           <div className="font-medium text-gray-900">{row.business_name}</div>
-          <div className="text-sm text-gray-500">{row.owner_email}</div>
-          <div className="text-sm text-gray-500">{row.owner_phone}</div>
+          <div className="text-xs text-gray-500 capitalize">{row.business_type?.replace(/_/g, ' ')}</div>
+          <div className="text-sm text-gray-600 mt-1">{row.owner_name}</div>
+          <div className="text-xs text-gray-500">{row.owner_email}</div>
         </div>
       ),
     },
@@ -142,8 +143,32 @@ export const PendingSalons = () => {
       accessorKey: 'city',
       cell: (row) => (
         <div className="text-sm">
-          <div>{row.city}, {row.state}</div>
+          <div className="font-medium">{row.city}, {row.state}</div>
           <div className="text-gray-500">{row.pincode}</div>
+          {row.latitude && row.longitude && (
+            <a 
+              href={`https://www.google.com/maps?q=${row.latitude},${row.longitude}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-blue-600 hover:underline"
+            >
+              📍 Map
+            </a>
+          )}
+        </div>
+      ),
+    },
+    {
+      header: 'Business Info',
+      accessorKey: 'staff_count',
+      cell: (row) => (
+        <div className="text-sm">
+          {row.staff_count && <div className="text-gray-700">👥 {row.staff_count} staff</div>}
+          {row.gst_number && <div className="text-xs text-green-600">✓ GST</div>}
+          {row.pan_number && <div className="text-xs text-green-600">✓ PAN</div>}
+          {row.opening_time && row.closing_time && (
+            <div className="text-xs text-gray-500">🕒 {row.opening_time} - {row.closing_time}</div>
+          )}
         </div>
       ),
     },
@@ -160,8 +185,8 @@ export const PendingSalons = () => {
     },
     {
       header: 'Submitted On',
-      accessorKey: 'created_at',
-      cell: (row) => row.created_at ? format(new Date(row.created_at), 'MMM dd, yyyy HH:mm') : 'N/A',
+      accessorKey: 'submitted_at',
+      cell: (row) => row.submitted_at ? format(new Date(row.submitted_at), 'MMM dd, yyyy HH:mm') : (row.created_at ? format(new Date(row.created_at), 'MMM dd, yyyy') : 'N/A'),
     },
     {
       header: 'Actions',
@@ -246,6 +271,14 @@ export const PendingSalons = () => {
                   <p className="font-medium">{selectedRequest.business_name}</p>
                 </div>
                 <div>
+                  <p className="text-sm text-gray-600">Business Type</p>
+                  <p className="font-medium capitalize">{selectedRequest.business_type?.replace(/_/g, ' ')}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Owner Name</p>
+                  <p className="font-medium">{selectedRequest.owner_name}</p>
+                </div>
+                <div>
                   <p className="text-sm text-gray-600">Owner Email</p>
                   <p className="font-medium">{selectedRequest.owner_email}</p>
                 </div>
@@ -257,122 +290,255 @@ export const PendingSalons = () => {
                   <p className="text-sm text-gray-600">Location</p>
                   <p className="font-medium">{selectedRequest.city}, {selectedRequest.state} {selectedRequest.pincode}</p>
                 </div>
+                {selectedRequest.latitude && selectedRequest.longitude && (
+                  <div className="col-span-2">
+                    <p className="text-sm text-gray-600">Coordinates</p>
+                    <p className="font-medium text-xs flex items-center gap-2">
+                      <span>📍 {selectedRequest.latitude.toFixed(6)}, {selectedRequest.longitude.toFixed(6)}</span>
+                      <a 
+                        href={`https://www.google.com/maps?q=${selectedRequest.latitude},${selectedRequest.longitude}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:underline"
+                      >
+                        View on Map →
+                      </a>
+                    </p>
+                  </div>
+                )}
                 <div className="col-span-2">
                   <p className="text-sm text-gray-600">Address</p>
                   <p className="font-medium">{selectedRequest.business_address}</p>
                 </div>
-                {selectedRequest.documents?.description && (
-                  <div className="col-span-2">
-                    <p className="text-sm text-gray-600">Description</p>
-                    <p className="font-medium">{selectedRequest.documents.description}</p>
+                {selectedRequest.staff_count && (
+                  <div>
+                    <p className="text-sm text-gray-600">Staff Count</p>
+                    <p className="font-medium">👥 {selectedRequest.staff_count} staff members</p>
                   </div>
                 )}
               </div>
             </div>
 
-            {/* Business Hours */}
-            {selectedRequest.documents?.business_hours && (
+            {/* Legal & Compliance */}
+            {(selectedRequest.gst_number || selectedRequest.pan_number || selectedRequest.business_license || selectedRequest.registration_certificate) && (
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-3">Business Hours</h3>
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <div className="grid grid-cols-2 gap-2">
-                    {Object.entries(selectedRequest.documents.business_hours).map(([day, hours]) => (
-                      <div key={day} className="flex justify-between">
-                        <span className="text-gray-600 capitalize">{day}:</span>
-                        <span className="font-medium">{hours || 'Closed'}</span>
-                      </div>
-                    ))}
-                  </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-3">Legal & Compliance</h3>
+                <div className="grid grid-cols-2 gap-4 bg-green-50 p-4 rounded-lg">
+                  {selectedRequest.gst_number && (
+                    <div>
+                      <p className="text-sm text-gray-600">GST Number</p>
+                      <p className="font-mono font-medium">{selectedRequest.gst_number}</p>
+                    </div>
+                  )}
+                  {selectedRequest.pan_number && (
+                    <div>
+                      <p className="text-sm text-gray-600">PAN Number</p>
+                      <p className="font-mono font-medium">{selectedRequest.pan_number}</p>
+                    </div>
+                  )}
+                  {selectedRequest.business_license && (
+                    <div>
+                      <p className="text-sm text-gray-600 mb-1">Business License</p>
+                      <a 
+                        href={selectedRequest.business_license} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:underline text-sm flex items-center gap-1"
+                      >
+                        📄 View Document →
+                      </a>
+                    </div>
+                  )}
+                  {selectedRequest.registration_certificate && (
+                    <div>
+                      <p className="text-sm text-gray-600 mb-1">Registration Certificate</p>
+                      <a 
+                        href={selectedRequest.registration_certificate} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:underline text-sm flex items-center gap-1"
+                      >
+                        📄 View Certificate →
+                      </a>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
 
-            {/* Images */}
-            <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-3">Photos</h3>
-              <div className="grid grid-cols-3 gap-4">
-                {selectedRequest.documents?.cover_image && (
-                  <div>
-                    <p className="text-sm text-gray-600 mb-2">Cover Image</p>
-                    <img src={selectedRequest.documents.cover_image} alt="Cover" className="w-full h-32 object-cover rounded-lg" />
-                  </div>
-                )}
-                {selectedRequest.documents?.logo && (
-                  <div>
-                    <p className="text-sm text-gray-600 mb-2">Logo</p>
-                    <img src={selectedRequest.documents.logo} alt="Logo" className="w-full h-32 object-contain rounded-lg bg-gray-100" />
-                  </div>
-                )}
-                {selectedRequest.documents?.images && Array.isArray(selectedRequest.documents.images) && selectedRequest.documents.images.map((img, idx) => (
-                  <div key={idx}>
-                    <p className="text-sm text-gray-600 mb-2">Gallery {idx + 1}</p>
-                    <img src={img} alt={`Gallery ${idx + 1}`} className="w-full h-32 object-cover rounded-lg" />
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Services */}
-            {selectedRequest.documents?.services && Array.isArray(selectedRequest.documents.services) && selectedRequest.documents.services.length > 0 && (
+            {/* Additional Documents */}
+            {selectedRequest.documents && Object.keys(selectedRequest.documents).length > 0 && (
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-3">
-                  Services ({selectedRequest.documents.services.length})
-                </h3>
-                <div className="bg-gray-50 p-4 rounded-lg space-y-3">
-                  {selectedRequest.documents.services.map((service, idx) => (
-                    <div key={idx} className="bg-white p-3 rounded-lg border border-gray-200">
-                      <div className="flex justify-between items-start mb-2">
-                        <div>
-                          <h4 className="font-semibold text-gray-900">{service.name}</h4>
-                          <p className="text-sm text-gray-600">{service.category || 'General'}</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-lg font-bold text-purple-600">₹{service.price}</p>
-                          {service.discounted_price && (
-                            <p className="text-sm text-gray-500 line-through">₹{service.discounted_price}</p>
+                <h3 className="text-lg font-semibold text-gray-900 mb-3">Additional Information</h3>
+                <div className="bg-gray-100 p-4 rounded-lg space-y-3">
+                  {Object.entries(selectedRequest.documents)
+                    .filter(([key, value]) => {
+                      // Filter out empty values
+                      if (value === null || value === undefined) return false;
+                      if (typeof value === 'string' && !value.trim()) return false;
+                      return true;
+                    })
+                    .map(([key, value]) => (
+                      <div key={key} className="bg-white p-3 rounded border border-gray-200">
+                        <p className="text-sm font-semibold text-gray-700 mb-1 capitalize">
+                          {key.replace(/_/g, ' ')}
+                        </p>
+                        <div className="text-sm text-gray-600">
+                          {typeof value === 'string' && (value.startsWith('http://') || value.startsWith('https://')) ? (
+                            <a 
+                              href={value} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="text-blue-600 hover:underline inline-flex items-center gap-1"
+                            >
+                              🔗 View Document →
+                            </a>
+                          ) : typeof value === 'object' && value !== null ? (
+                            <pre className="text-xs bg-gray-50 p-2 rounded overflow-x-auto">
+                              {JSON.stringify(value, null, 2)}
+                            </pre>
+                          ) : (
+                            <p className="break-words">{String(value)}</p>
                           )}
                         </div>
                       </div>
-                      {service.description && (
-                        <p className="text-sm text-gray-600 mb-2">{service.description}</p>
-                      )}
-                      <div className="flex items-center gap-4 text-xs text-gray-500">
-                        <span>⏱️ {service.duration_minutes || 30} minutes</span>
+                    ))}
+                  {Object.entries(selectedRequest.documents)
+                    .filter(([key, value]) => {
+                      if (value === null || value === undefined) return false;
+                      if (typeof value === 'string' && !value.trim()) return false;
+                      return true;
+                    }).length === 0 && (
+                    <p className="text-sm text-gray-500 italic">No additional information</p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Operating Hours */}
+            {(selectedRequest.opening_time || selectedRequest.closing_time || selectedRequest.working_days) && (
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-3">Operating Hours</h3>
+                <div className="bg-blue-50 p-4 rounded-lg">
+                  {(selectedRequest.opening_time || selectedRequest.closing_time) && (
+                    <div className="mb-3">
+                      <p className="text-sm text-gray-600 mb-1">Hours</p>
+                      <p className="font-medium text-lg">
+                        🕒 {selectedRequest.opening_time || 'N/A'} - {selectedRequest.closing_time || 'N/A'}
+                      </p>
+                    </div>
+                  )}
+                  {selectedRequest.working_days && Array.isArray(selectedRequest.working_days) && selectedRequest.working_days.length > 0 && (
+                    <div>
+                      <p className="text-sm text-gray-600 mb-2">Working Days</p>
+                      <div className="flex flex-wrap gap-2">
+                        {selectedRequest.working_days.map((day, idx) => (
+                          <span key={idx} className="px-3 py-1 bg-white border border-blue-200 rounded-full text-sm font-medium">
+                            {day}
+                          </span>
+                        ))}
                       </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Photos */}
+            {(selectedRequest.cover_image_url || (selectedRequest.gallery_images && selectedRequest.gallery_images.length > 0)) && (
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-3">Photos</h3>
+                <div className="grid grid-cols-3 gap-4">
+                  {selectedRequest.cover_image_url && (
+                    <div className="col-span-3">
+                      <p className="text-sm text-gray-600 mb-2">Cover Image</p>
+                      <img src={selectedRequest.cover_image_url} alt="Cover" className="w-full h-48 object-cover rounded-lg" />
+                    </div>
+                  )}
+                  {selectedRequest.gallery_images && Array.isArray(selectedRequest.gallery_images) && selectedRequest.gallery_images.map((img, idx) => (
+                    <div key={idx}>
+                      <p className="text-sm text-gray-600 mb-2">Gallery {idx + 1}</p>
+                      <img src={img} alt={`Gallery ${idx + 1}`} className="w-full h-32 object-cover rounded-lg" />
                     </div>
                   ))}
                 </div>
               </div>
             )}
 
-            {/* Specialties */}
-            {selectedRequest.documents?.specialties && Array.isArray(selectedRequest.documents.specialties) && selectedRequest.documents.specialties.length > 0 && (
+            {/* Services Offered */}
+            {selectedRequest.services_offered && Object.keys(selectedRequest.services_offered).length > 0 && (
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-3">Specialties</h3>
-                <div className="flex flex-wrap gap-2">
-                  {selectedRequest.documents.specialties.map((specialty, idx) => (
-                    <span
-                      key={idx}
-                      className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm font-medium"
-                    >
-                      {specialty}
-                    </span>
-                  ))}
+                <h3 className="text-lg font-semibold text-gray-900 mb-3">
+                  Services Offered
+                </h3>
+                <div className="bg-purple-50 p-4 rounded-lg">
+                  {typeof selectedRequest.services_offered === 'object' && (
+                    <div className="space-y-3">
+                      {Object.entries(selectedRequest.services_offered).map(([category, services]) => (
+                        <div key={category} className="bg-white p-3 rounded-lg border border-purple-200">
+                          <h4 className="font-semibold text-purple-900 mb-2 capitalize">{category.replace(/_/g, ' ')}</h4>
+                          <div className="space-y-2">
+                            {Array.isArray(services) && services.map((service, idx) => (
+                              <div key={idx} className="flex justify-between items-center">
+                                <div>
+                                  <span className="font-medium text-gray-900">{typeof service === 'object' ? service.name : service}</span>
+                                  {typeof service === 'object' && service.description && (
+                                    <p className="text-xs text-gray-600">{service.description}</p>
+                                  )}
+                                </div>
+                                {typeof service === 'object' && (
+                                  <div className="text-right">
+                                    {service.price && (
+                                      <p className="font-semibold text-purple-600">₹{service.price}</p>
+                                    )}
+                                    {service.duration_minutes && (
+                                      <p className="text-xs text-gray-500">{service.duration_minutes} min</p>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </div>
             )}
 
             {/* RM Information */}
             <div className="bg-blue-50 p-4 rounded-lg">
-              <p className="text-sm text-gray-600">Submitted by Relationship Manager</p>
-              <p className="font-medium text-gray-900">{selectedRequest.rm_profile?.profiles?.full_name || 'Unknown RM'}</p>
-              <p className="text-sm text-gray-600">{selectedRequest.rm_profile?.profiles?.email || 'N/A'}</p>
-              <p className="text-sm text-gray-500 mt-2">
-                RM Score: <span className="font-semibold">{selectedRequest.rm_profile?.total_score || 0}</span>
-              </p>
-              <p className="text-sm text-gray-500">
-                {selectedRequest.created_at ? format(new Date(selectedRequest.created_at), 'PPpp') : 'Unknown date'}
-              </p>
+              <h3 className="text-lg font-semibold text-gray-900 mb-3">Submitted By</h3>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-gray-600">Relationship Manager</p>
+                  <p className="font-medium text-gray-900">{selectedRequest.rm_profile?.profiles?.full_name || 'Unknown RM'}</p>
+                  <p className="text-sm text-gray-600">{selectedRequest.rm_profile?.profiles?.email || 'N/A'}</p>
+                  <p className="text-sm text-gray-600">{selectedRequest.rm_profile?.profiles?.phone || 'N/A'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">RM Performance</p>
+                  <p className="text-lg font-semibold text-blue-600">{selectedRequest.rm_profile?.total_score || 0} points</p>
+                  {selectedRequest.rm_profile?.territories && (
+                    <p className="text-xs text-gray-500 mt-1">Territory: {selectedRequest.rm_profile.territories}</p>
+                  )}
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Created On</p>
+                  <p className="text-sm font-medium">
+                    {selectedRequest.created_at ? format(new Date(selectedRequest.created_at), 'PPpp') : 'Unknown'}
+                  </p>
+                </div>
+                {selectedRequest.submitted_at && (
+                  <div>
+                    <p className="text-sm text-gray-600">Submitted On</p>
+                    <p className="text-sm font-medium">
+                      {format(new Date(selectedRequest.submitted_at), 'PPpp')}
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Admin Notes (Optional) */}

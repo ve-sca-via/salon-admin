@@ -1,6 +1,5 @@
-import { useEffect, useState } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import { fetchStaff, createStaff, updateStaff, deleteStaff } from '../store/slices/staffSlice';
+import { useState } from 'react';
+import { useGetAllStaffQuery, useCreateStaffMutation, useUpdateStaffMutation, useDeleteStaffMutation } from '../services/api/staffApi';
 import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
 import { Input } from '../components/common/FormElements';
@@ -10,8 +9,12 @@ import { StatusBadge } from '../components/common/Badge';
 import { toast } from 'react-toastify';
 
 export const Staff = () => {
-  const dispatch = useDispatch();
-  const { staff, isLoading } = useSelector((state) => state.staff);
+  const { data: staffData, isLoading } = useGetAllStaffQuery({});
+  const [createStaff] = useCreateStaffMutation();
+  const [updateStaff] = useUpdateStaffMutation();
+  const [deleteStaffMutation] = useDeleteStaffMutation();
+
+  const staff = staffData?.data || [];
   
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -23,10 +26,6 @@ export const Staff = () => {
     specialization: '',
     is_active: true,
   });
-
-  useEffect(() => {
-    dispatch(fetchStaff());
-  }, [dispatch]);
 
   const resetForm = () => {
     setForm({
@@ -40,7 +39,7 @@ export const Staff = () => {
 
   const handleCreate = async () => {
     try {
-      await dispatch(createStaff(form)).unwrap();
+      await createStaff(form).unwrap();
       toast.success('Staff member created successfully');
       setIsCreateModalOpen(false);
       resetForm();
@@ -63,7 +62,7 @@ export const Staff = () => {
 
   const handleUpdate = async () => {
     try {
-      await dispatch(updateStaff({ id: selectedStaff.id, updates: form })).unwrap();
+      await updateStaff({ staffId: selectedStaff.id, data: form }).unwrap();
       toast.success('Staff member updated successfully');
       setIsEditModalOpen(false);
       resetForm();
@@ -75,7 +74,7 @@ export const Staff = () => {
   const handleDelete = async (staffId) => {
     if (window.confirm('Are you sure you want to delete this staff member?')) {
       try {
-        await dispatch(deleteStaff(staffId)).unwrap();
+        await deleteStaffMutation(staffId).unwrap();
         toast.success('Staff member deleted successfully');
       } catch {
         toast.error('Failed to delete staff member');

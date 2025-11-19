@@ -17,6 +17,7 @@ const Users = lazy(() => import('./pages/Users').then(module => ({ default: modu
 const Appointments = lazy(() => import('./pages/Appointments').then(module => ({ default: module.Appointments })));
 const Salons = lazy(() => import('./pages/Salons'));
 const Staff = lazy(() => import('./pages/Staff').then(module => ({ default: module.Staff })));
+const Services = lazy(() => import('./pages/Services').then(module => ({ default: module.Services })));
 const PendingSalons = lazy(() => import('./pages/PendingSalons'));
 const CareerApplications = lazy(() => import('./pages/CareerApplications'));
 const SystemConfig = lazy(() => import('./pages/SystemConfig').then(module => ({ default: module.SystemConfig })));
@@ -73,6 +74,7 @@ function AppContent() {
               <Route path="/salons" element={<Salons />} />
               <Route path="/pending-salons" element={<PendingSalons />} />
               <Route path="/staff" element={<Staff />} />
+              <Route path="/services" element={<Services />} />
               <Route path="/career-applications" element={<CareerApplications />} />
               <Route path="/system-config" element={<SystemConfig />} />
             </Route>

@@ -15,7 +15,7 @@ export const appointmentApi = createApi({
     // Get all appointments (admin view)
     getAllAppointments: builder.query({
       query: ({ status, limit = 50, offset = 0 } = {}) => ({
-        url: '/api/admin/bookings',
+        url: '/api/v1/admin/bookings',
         method: 'get',
         params: { status, limit, offset },
       }),
@@ -33,7 +33,7 @@ export const appointmentApi = createApi({
     // Get single appointment
     getAppointmentById: builder.query({
       query: (appointmentId) => ({
-        url: `/api/admin/bookings/${appointmentId}`,
+        url: `/api/v1/admin/bookings/${appointmentId}`,
         method: 'get',
       }),
       providesTags: (result, error, id) => [{ type: 'Appointment', id }],
@@ -43,7 +43,7 @@ export const appointmentApi = createApi({
     // Update appointment status (admin)
     updateAppointmentStatus: builder.mutation({
       query: ({ appointmentId, status }) => ({
-        url: `/api/admin/bookings/${appointmentId}/status`,
+        url: `/api/v1/admin/bookings/${appointmentId}/status`,
         method: 'put',
         data: { status },
       }),
@@ -57,7 +57,7 @@ export const appointmentApi = createApi({
     // Delete appointment (admin)
     deleteAppointment: builder.mutation({
       query: (appointmentId) => ({
-        url: `/api/admin/bookings/${appointmentId}`,
+        url: `/api/v1/admin/bookings/${appointmentId}`,
         method: 'delete',
       }),
       invalidatesTags: [{ type: 'Appointments', id: 'LIST' }, 'DashboardStats'],

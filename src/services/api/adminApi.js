@@ -15,7 +15,7 @@ export const adminApi = createApi({
     // Get dashboard statistics
     getDashboardStats: builder.query({
       query: () => ({
-        url: '/api/admin/dashboard/stats',
+        url: '/api/v1/admin/stats',
         method: 'get',
       }),
       providesTags: ['DashboardStats'],

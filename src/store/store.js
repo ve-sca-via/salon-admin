@@ -1,10 +1,5 @@
 import { configureStore } from '@reduxjs/toolkit';
 import authReducer from './slices/authSlice';
-import usersReducer from './slices/usersSlice';
-import appointmentsReducer from './slices/appointmentsSlice';
-import salonsReducer from './slices/salonsSlice';
-import staffReducer from './slices/staffSlice';
-import dashboardReducer from './slices/dashboardSlice';
 
 // RTK Query APIs
 import { adminApi } from '../services/api/adminApi';
@@ -12,21 +7,22 @@ import { salonApi } from '../services/api/salonApi';
 import { userApi } from '../services/api/userApi';
 import { appointmentApi } from '../services/api/appointmentApi';
 import { careerApi } from '../services/api/careerApi';
+import { serviceApi } from '../services/api/serviceApi';
+import { staffApi } from '../services/api/staffApi';
+import { configApi } from '../services/api/configApi';
 
 export const store = configureStore({
   reducer: {
     auth: authReducer,
-    users: usersReducer,
-    appointments: appointmentsReducer,
-    salons: salonsReducer,
-    staff: staffReducer,
-    dashboard: dashboardReducer,
     // RTK Query reducers
     [adminApi.reducerPath]: adminApi.reducer,
     [salonApi.reducerPath]: salonApi.reducer,
     [userApi.reducerPath]: userApi.reducer,
     [appointmentApi.reducerPath]: appointmentApi.reducer,
     [careerApi.reducerPath]: careerApi.reducer,
+    [serviceApi.reducerPath]: serviceApi.reducer,
+    [staffApi.reducerPath]: staffApi.reducer,
+    [configApi.reducerPath]: configApi.reducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
@@ -43,5 +39,8 @@ export const store = configureStore({
       .concat(salonApi.middleware)
       .concat(userApi.middleware)
       .concat(appointmentApi.middleware)
-      .concat(careerApi.middleware),
+      .concat(careerApi.middleware)
+      .concat(serviceApi.middleware)
+      .concat(staffApi.middleware)
+      .concat(configApi.middleware),
 });

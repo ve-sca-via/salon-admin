@@ -2,7 +2,7 @@ import { Navigate, Outlet } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { PageLoader } from '../common/LoadingSpinner';
 import { useEffect } from 'react';
-import { getCurrentUser } from '../../services/backendApi';
+import { getCurrentUser } from '../../services/api/authApi';
 import { useDispatch } from 'react-redux';
 import { setUser, setError } from '../../store/slices/authSlice';
 

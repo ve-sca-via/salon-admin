@@ -15,7 +15,7 @@ export const salonApi = createApi({
     // Get all salons (admin view)
     getAllSalons: builder.query({
       query: ({ status, limit = 50, offset = 0 } = {}) => ({
-        url: '/api/admin/salons',
+        url: '/api/v1/admin/salons',
         method: 'get',
         params: { status, limit, offset },
       }),
@@ -32,7 +32,7 @@ export const salonApi = createApi({
     // Get pending salons (vendor join requests)
     getPendingSalons: builder.query({
       query: ({ limit = 50, offset = 0 } = {}) => ({
-        url: '/api/admin/vendor-requests',
+        url: '/api/v1/admin/vendor-requests',
         method: 'get',
         params: { status_filter: 'pending', limit, offset },
       }),
@@ -44,7 +44,7 @@ export const salonApi = createApi({
     // Get single salon details
     getSalonById: builder.query({
       query: (salonId) => ({
-        url: `/api/admin/salons/${salonId}`,
+        url: `/api/v1/admin/salons/${salonId}`,
         method: 'get',
       }),
       providesTags: (result, error, id) => [{ type: 'Salon', id }],
@@ -54,7 +54,7 @@ export const salonApi = createApi({
     // Approve vendor request
     approveVendorRequest: builder.mutation({
       query: ({ requestId, adminNotes }) => ({
-        url: `/api/admin/vendor-requests/${requestId}/approve`,
+        url: `/api/v1/admin/vendor-requests/${requestId}/approve`,
         method: 'post',
         data: { admin_notes: adminNotes },
       }),
@@ -64,7 +64,7 @@ export const salonApi = createApi({
     // Reject vendor request
     rejectVendorRequest: builder.mutation({
       query: ({ requestId, adminNotes }) => ({
-        url: `/api/admin/vendor-requests/${requestId}/reject`,
+        url: `/api/v1/admin/vendor-requests/${requestId}/reject`,
         method: 'post',
         data: { admin_notes: adminNotes },
       }),
@@ -74,7 +74,7 @@ export const salonApi = createApi({
     // Update salon (admin)
     updateSalon: builder.mutation({
       query: ({ salonId, data }) => ({
-        url: `/api/admin/salons/${salonId}`,
+        url: `/api/v1/admin/salons/${salonId}`,
         method: 'put',
         data,
       }),
@@ -87,7 +87,7 @@ export const salonApi = createApi({
     // Delete salon (admin)
     deleteSalon: builder.mutation({
       query: (salonId) => ({
-        url: `/api/admin/salons/${salonId}`,
+        url: `/api/v1/admin/salons/${salonId}`,
         method: 'delete',
       }),
       invalidatesTags: [{ type: 'Salons', id: 'LIST' }, 'DashboardStats'],
@@ -96,7 +96,7 @@ export const salonApi = createApi({
     // Toggle salon active status
     toggleSalonStatus: builder.mutation({
       query: ({ salonId, isActive }) => ({
-        url: `/api/admin/salons/${salonId}/status`,
+        url: `/api/v1/admin/salons/${salonId}/status`,
         method: 'put',
         data: { is_active: isActive },
       }),

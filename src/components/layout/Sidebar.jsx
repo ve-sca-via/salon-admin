@@ -1,27 +1,20 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { supabase } from '../../config/supabase';
-import { getPendingVendorRequests } from '../../services/backendApi';
+import { useGetPendingSalonsQuery } from '../../services/api/salonApi';
 
 export const Sidebar = () => {
   const location = useLocation();
-  const [pendingCount, setPendingCount] = useState(0);
+  
+  // Use RTK Query to fetch pending salons
+  const { data: pendingSalonsData } = useGetPendingSalonsQuery({ limit: 100 });
+  const pendingCount = pendingSalonsData?.data?.length || 0;
+  
   const [hasNewNotification, setHasNewNotification] = useState(false);
 
   const isActive = (path) => location.pathname === path;
 
   useEffect(() => {
-    const fetchPendingCount = async () => {
-      try {
-        const data = await getPendingVendorRequests();
-        setPendingCount(data?.length || 0);
-      } catch (error) {
-        console.error('Error fetching pending count:', error);
-      }
-    };
-
-    fetchPendingCount();
-    
     // Subscribe to real-time changes
     const channel = supabase
       .channel('sidebar-notifications')
@@ -35,7 +28,6 @@ export const Sidebar = () => {
         },
         (payload) => {
           console.log('Sidebar: New submission detected', payload);
-          setPendingCount((prev) => prev + 1);
           setHasNewNotification(true);
           
           // Remove animation after 3 seconds
@@ -49,15 +41,8 @@ export const Sidebar = () => {
           schema: 'public',
           table: 'vendor_join_requests',
         },
-        (payload) => {
-          // If status changed from pending to something else, decrease count
-          if (payload.old?.status === 'pending' && payload.new?.status !== 'pending') {
-            setPendingCount((prev) => Math.max(0, prev - 1));
-          }
-          // If status changed to pending from something else, increase count
-          else if (payload.old?.status !== 'pending' && payload.new?.status === 'pending') {
-            setPendingCount((prev) => prev + 1);
-          }
+        () => {
+          // RTK Query will automatically refetch when cache is invalidated
         }
       )
       .subscribe();
