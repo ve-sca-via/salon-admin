@@ -27,7 +27,10 @@ export const appointmentApi = createApi({
             ]
           : [{ type: 'Appointments', id: 'LIST' }],
       keepUnusedDataFor: 120, // Cache for 2 minutes
-      refetchOnFocus: true,
+      refetchOnFocus: false,
+      refetchOnReconnect: true,
+      refetchOnMountOrArgChange: 30, // Refetch if data is older than 30 seconds
+      pollingInterval: 120000, // Poll every 2 minutes when filtered
     }),
 
     // Get single appointment
@@ -47,10 +50,23 @@ export const appointmentApi = createApi({
         method: 'put',
         data: { status },
       }),
+      // Optimistic update
+      async onQueryStarted({ appointmentId, status }, { dispatch, queryFulfilled }) {
+        const patchResult = dispatch(
+          appointmentApi.util.updateQueryData('getAllAppointments', { status: '' }, (draft) => {
+            const appointment = draft.data?.find(a => a.id === appointmentId);
+            if (appointment) appointment.status = status;
+          })
+        );
+        try {
+          await queryFulfilled;
+        } catch {
+          patchResult.undo();
+        }
+      },
       invalidatesTags: (result, error, { appointmentId }) => [
         { type: 'Appointment', id: appointmentId },
         { type: 'Appointments', id: 'LIST' },
-        'DashboardStats',
       ],
     }),
 
@@ -60,7 +76,7 @@ export const appointmentApi = createApi({
         url: `/api/v1/admin/bookings/${appointmentId}`,
         method: 'delete',
       }),
-      invalidatesTags: [{ type: 'Appointments', id: 'LIST' }, 'DashboardStats'],
+      invalidatesTags: [{ type: 'Appointments', id: 'LIST' }],
     }),
   }),
 });

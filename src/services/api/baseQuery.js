@@ -162,7 +162,9 @@ axiosInstance.interceptors.response.use(
           localStorage.removeItem('access_token');
           localStorage.removeItem('refresh_token');
           localStorage.removeItem('user');
-          window.location.href = '/login';
+          
+          // Dispatch logout event for React app to handle
+          window.dispatchEvent(new CustomEvent('auth:logout', { detail: 'Session expired' }));
           
           reject(err);
         })

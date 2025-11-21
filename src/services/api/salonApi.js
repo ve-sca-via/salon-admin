@@ -10,7 +10,7 @@ import axiosBaseQuery from './baseQuery';
 export const salonApi = createApi({
   reducerPath: 'salonApi',
   baseQuery: axiosBaseQuery(),
-  tagTypes: ['Salons', 'Salon', 'PendingSalons'],
+  tagTypes: ['Salons', 'Salon', 'PendingSalons', 'RecentActivity'],
   endpoints: (builder) => ({
     // Get all salons (admin view)
     getAllSalons: builder.query({
@@ -27,6 +27,7 @@ export const salonApi = createApi({
             ]
           : [{ type: 'Salons', id: 'LIST' }],
       keepUnusedDataFor: 300, // Cache for 5 minutes
+      refetchOnMountOrArgChange: 30, // Refetch if data is older than 30 seconds
     }),
 
     // Get pending salons (vendor join requests)
@@ -37,8 +38,11 @@ export const salonApi = createApi({
         params: { status_filter: 'pending', limit, offset },
       }),
       providesTags: ['PendingSalons'],
-      keepUnusedDataFor: 120, // Cache for 2 minutes (pending items change frequently)
-      refetchOnFocus: true,
+      keepUnusedDataFor: 180, // Cache for 3 minutes (now persisted to localStorage)
+      refetchOnFocus: false, // Using Supabase real-time instead
+      refetchOnReconnect: true,
+      refetchOnMountOrArgChange: 60, // Only refetch if data is older than 60 seconds
+      pollingInterval: 60000, // Poll every 60 seconds for updates (reduced from 30s)
     }),
 
     // Get single salon details
@@ -58,7 +62,7 @@ export const salonApi = createApi({
         method: 'post',
         data: { admin_notes: adminNotes },
       }),
-      invalidatesTags: ['PendingSalons', { type: 'Salons', id: 'LIST' }, 'DashboardStats'],
+      invalidatesTags: ['PendingSalons', { type: 'Salons', id: 'LIST' }, 'DashboardStats', 'RecentActivity'],
     }),
 
     // Reject vendor request
@@ -68,7 +72,7 @@ export const salonApi = createApi({
         method: 'post',
         data: { admin_notes: adminNotes },
       }),
-      invalidatesTags: ['PendingSalons', 'DashboardStats'],
+      invalidatesTags: ['PendingSalons', 'DashboardStats', 'RecentActivity'],
     }),
 
     // Update salon (admin)
@@ -100,6 +104,20 @@ export const salonApi = createApi({
         method: 'put',
         data: { is_active: isActive },
       }),
+      // Optimistic update for instant UI feedback
+      async onQueryStarted({ salonId, isActive }, { dispatch, queryFulfilled }) {
+        const patchResult = dispatch(
+          salonApi.util.updateQueryData('getAllSalons', {}, (draft) => {
+            const salon = draft.data?.find(s => s.id === salonId);
+            if (salon) salon.is_active = isActive;
+          })
+        );
+        try {
+          await queryFulfilled;
+        } catch {
+          patchResult.undo();
+        }
+      },
       invalidatesTags: (result, error, { salonId }) => [
         { type: 'Salon', id: salonId },
         { type: 'Salons', id: 'LIST' },

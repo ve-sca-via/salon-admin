@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 import { Table } from '../components/common/Table';
 import { Modal } from '../components/common/Modal';
 import { Card } from '../components/common/Card';
@@ -11,13 +11,15 @@ import { format } from 'date-fns';
 import { 
   useGetPendingSalonsQuery,
   useApproveVendorRequestMutation,
-  useRejectVendorRequestMutation
+  useRejectVendorRequestMutation,
+  salonApi
 } from '../services/api/salonApi';
 import { supabase } from '../config/supabase';
 
 export const PendingSalons = () => {
   // RTK Query hooks
-  const { data: pendingData, isLoading, refetch } = useGetPendingSalonsQuery();
+  const dispatch = useDispatch();
+  const { data: pendingData, isLoading, isFetching } = useGetPendingSalonsQuery();
   const [approveRequest] = useApproveVendorRequestMutation();
   const [rejectRequest] = useRejectVendorRequestMutation();
   
@@ -44,17 +46,44 @@ export const PendingSalons = () => {
           filter: 'status_filter=eq.pending', // Only listen to pending requests
         },
         (payload) => {
-          // Refresh the list when any change occurs
-          refetch();
-          
-          // Show toast notification for new submissions with salon name
+          // Manually update cache instead of full refetch for better performance
           if (payload.eventType === 'INSERT') {
+            // Add new request to cache
+            dispatch(
+              salonApi.util.updateQueryData('getPendingSalons', {}, (draft) => {
+                if (draft?.data) {
+                  draft.data.unshift(payload.new);
+                }
+              })
+            );
+            
             const salonName = payload.new?.business_name || 'New Salon';
             toast.info(`🔔 ${salonName} submitted for approval!`, { 
               autoClose: 5000,
               position: 'top-right',
               theme: 'light',
             });
+          } else if (payload.eventType === 'UPDATE') {
+            // Update existing request in cache
+            dispatch(
+              salonApi.util.updateQueryData('getPendingSalons', {}, (draft) => {
+                if (draft?.data) {
+                  const index = draft.data.findIndex(r => r.id === payload.new.id);
+                  if (index !== -1) {
+                    draft.data[index] = payload.new;
+                  }
+                }
+              })
+            );
+          } else if (payload.eventType === 'DELETE') {
+            // Remove from cache
+            dispatch(
+              salonApi.util.updateQueryData('getPendingSalons', {}, (draft) => {
+                if (draft?.data) {
+                  draft.data = draft.data.filter(r => r.id !== payload.old.id);
+                }
+              })
+            );
           }
         }
       )
@@ -64,7 +93,7 @@ export const PendingSalons = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [refetch]);
+  }, [dispatch]);
 
   const handleApprove = async () => {
     try {
@@ -205,12 +234,25 @@ export const PendingSalons = () => {
     },
   ];
 
-  if (isLoading) {
+  // Only show full-page loader on INITIAL load (no cached data)
+  // If we have cached data, show it while refetching in background
+  if (isLoading && !pendingData) {
     return <LoadingSpinner size="xl" className="min-h-screen" />;
   }
 
   return (
     <div className="space-y-6">
+      {/* Background refresh indicator */}
+      {isFetching && pendingData && (
+        <div className="fixed top-16 right-4 z-50 bg-blue-500 text-white px-4 py-2 rounded-lg shadow-lg flex items-center space-x-2 animate-pulse">
+          <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          <span className="text-sm font-medium">Updating...</span>
+        </div>
+      )}
+      
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Pending Salon Submissions</h1>

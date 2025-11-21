@@ -21,7 +21,10 @@ export const ProtectedRoute = () => {
         .catch(error => {
           console.error('Failed to get user:', error);
           dispatch(setError(error.message));
-          localStorage.clear();
+          // Only clear auth-related items, not all localStorage
+          localStorage.removeItem('access_token');
+          localStorage.removeItem('refresh_token');
+          localStorage.removeItem('user');
         });
     }
   }, [user, dispatch]);
@@ -30,6 +33,7 @@ export const ProtectedRoute = () => {
     return <PageLoader />;
   }
 
+  // Check token first, then fallback to isAuthenticated
   const token = localStorage.getItem('access_token');
   if (!token && !isAuthenticated) {
     return <Navigate to="/login" replace />;

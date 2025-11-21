@@ -1,11 +1,12 @@
 import { useEffect, lazy, Suspense } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { Provider, useDispatch, useSelector } from 'react-redux';
-import { ToastContainer } from 'react-toastify';
+import { PersistGate } from 'redux-persist/integration/react';
+import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
-import { store } from './store/store';
-import { setUser, setLoading } from './store/slices/authSlice';
+import { store, persistor } from './store/store';
+import { setUser, setLoading, logout as logoutAction } from './store/slices/authSlice';
 
 import { MainLayout } from './components/layout/MainLayout';
 import { ProtectedRoute } from './components/layout/ProtectedRoute';
@@ -46,6 +47,50 @@ function AppContent() {
     };
 
     checkSession();
+
+    // Listen for auth logout events from axios interceptor
+    const handleAuthLogout = (event) => {
+      dispatch(logoutAction());
+      toast.error(event.detail || 'Session expired. Please login again.');
+      // Navigation will happen via ProtectedRoute redirect
+    };
+
+    window.addEventListener('auth:logout', handleAuthLogout);
+
+    // Security: Auto-logout after 30 minutes of inactivity (for shared computers)
+    let inactivityTimer;
+    const INACTIVITY_TIMEOUT = 30 * 60 * 1000; // 30 minutes
+
+    const resetInactivityTimer = () => {
+      clearTimeout(inactivityTimer);
+      inactivityTimer = setTimeout(() => {
+        const token = localStorage.getItem('access_token');
+        if (token) {
+          dispatch(logoutAction());
+          localStorage.removeItem('access_token');
+          localStorage.removeItem('refresh_token');
+          localStorage.removeItem('user');
+          toast.warning('Session expired due to inactivity. Please login again.');
+        }
+      }, INACTIVITY_TIMEOUT);
+    };
+
+    // Track user activity
+    const activityEvents = ['mousedown', 'keydown', 'scroll', 'touchstart'];
+    activityEvents.forEach(event => {
+      document.addEventListener(event, resetInactivityTimer);
+    });
+
+    // Start the timer
+    resetInactivityTimer();
+
+    return () => {
+      window.removeEventListener('auth:logout', handleAuthLogout);
+      clearTimeout(inactivityTimer);
+      activityEvents.forEach(event => {
+        document.removeEventListener(event, resetInactivityTimer);
+      });
+    };
   }, [dispatch]);
 
   if (isLoading) {
@@ -91,7 +136,9 @@ function AppContent() {
 function App() {
   return (
     <Provider store={store}>
-      <AppContent />
+      <PersistGate loading={null} persistor={persistor}>
+        <AppContent />
+      </PersistGate>
     </Provider>
   );
 }

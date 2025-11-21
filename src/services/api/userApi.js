@@ -10,7 +10,7 @@ import axiosBaseQuery from './baseQuery';
 export const userApi = createApi({
   reducerPath: 'userApi',
   baseQuery: axiosBaseQuery(),
-  tagTypes: ['Users', 'User', 'RMs'],
+  tagTypes: ['Users', 'User', 'RMs', 'RecentActivity'],
   endpoints: (builder) => ({
     // Get all users
     getAllUsers: builder.query({
@@ -26,7 +26,8 @@ export const userApi = createApi({
               { type: 'Users', id: 'LIST' },
             ]
           : [{ type: 'Users', id: 'LIST' }],
-      keepUnusedDataFor: 300, // Cache for 5 minutes
+      keepUnusedDataFor: 600, // Cache for 10 minutes (rarely changes)
+      refetchOnMountOrArgChange: 60, // Refetch if data is older than 1 minute
     }),
 
     // Get single user
@@ -46,7 +47,7 @@ export const userApi = createApi({
         method: 'post',
         data: userData,
       }),
-      invalidatesTags: [{ type: 'Users', id: 'LIST' }, 'DashboardStats'],
+      invalidatesTags: [{ type: 'Users', id: 'LIST' }, 'DashboardStats', 'RecentActivity'],
     }),
 
     // Update user (admin)

@@ -10,7 +10,7 @@ import axiosBaseQuery from './baseQuery';
 export const configApi = createApi({
   reducerPath: 'configApi',
   baseQuery: axiosBaseQuery(),
-  tagTypes: ['SystemConfigs', 'SystemConfig'],
+  tagTypes: ['SystemConfigs', 'SystemConfig', 'RecentActivity'],
   endpoints: (builder) => ({
     // Get all system configurations
     getSystemConfigs: builder.query({
@@ -25,7 +25,7 @@ export const configApi = createApi({
               { type: 'SystemConfigs', id: 'LIST' },
             ]
           : [{ type: 'SystemConfigs', id: 'LIST' }],
-      keepUnusedDataFor: 300, // Cache for 5 minutes
+      keepUnusedDataFor: 900, // Cache for 15 minutes (very static)
     }),
 
     // Get single system configuration
@@ -58,6 +58,7 @@ export const configApi = createApi({
       invalidatesTags: (result, error, { configKey }) => [
         { type: 'SystemConfig', id: configKey },
         { type: 'SystemConfigs', id: 'LIST' },
+        'RecentActivity',
       ],
     }),
 

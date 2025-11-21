@@ -1,10 +1,21 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { supabase } from '../../config/supabase';
-import { useGetPendingSalonsQuery } from '../../services/api/salonApi';
+import { 
+  useGetPendingSalonsQuery,
+  salonApi 
+} from '../../services/api/salonApi';
+import { adminApi } from '../../services/api/adminApi';
+import { userApi } from '../../services/api/userApi';
+import { appointmentApi } from '../../services/api/appointmentApi';
+import { careerApi } from '../../services/api/careerApi';
+import { serviceApi } from '../../services/api/serviceApi';
+import { configApi } from '../../services/api/configApi';
+import { useDispatch } from 'react-redux';
 
 export const Sidebar = () => {
   const location = useLocation();
+  const dispatch = useDispatch();
   
   // Use RTK Query to fetch pending salons
   const { data: pendingSalonsData } = useGetPendingSalonsQuery({ limit: 100 });
@@ -51,6 +62,39 @@ export const Sidebar = () => {
       supabase.removeChannel(channel);
     };
   }, []);
+
+  // Prefetch handlers for instant navigation
+  const handlePrefetch = (path) => {
+    // Prefetch data based on the route
+    switch (path) {
+      case '/':
+        dispatch(adminApi.util.prefetch('getDashboardStats', undefined, { force: false }));
+        break;
+      case '/pending-salons':
+        dispatch(salonApi.util.prefetch('getPendingSalons', {}, { force: false }));
+        break;
+      case '/salons':
+        dispatch(salonApi.util.prefetch('getAllSalons', {}, { force: false }));
+        break;
+      case '/users':
+        dispatch(userApi.util.prefetch('getAllUsers', {}, { force: false }));
+        break;
+      case '/appointments':
+        dispatch(appointmentApi.util.prefetch('getAllAppointments', {}, { force: false }));
+        break;
+      case '/career-applications':
+        dispatch(careerApi.util.prefetch('getCareerApplications', {}, { force: false }));
+        break;
+      case '/services':
+        dispatch(serviceApi.util.prefetch('getAllServices', {}, { force: false }));
+        break;
+      case '/system-config':
+        dispatch(configApi.util.prefetch('getSystemConfigs', undefined, { force: false }));
+        break;
+      default:
+        break;
+    }
+  };
 
   const menuItems = [
     {
@@ -143,6 +187,8 @@ export const Sidebar = () => {
           <Link
             key={item.path}
             to={item.path}
+            onMouseEnter={() => handlePrefetch(item.path)}
+            onFocus={() => handlePrefetch(item.path)}
             className={`flex items-center justify-between px-4 py-3 text-sm font-medium rounded-lg transition-all ${
               isActive(item.path)
                 ? 'bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-md'

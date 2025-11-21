@@ -94,7 +94,7 @@ export const Users = () => {
     setSelectedUser(user);
     setEditForm({
       full_name: user.full_name || '',
-      role: user.role || ROLES.CUSTOMER,
+      role: user.user_role || ROLES.CUSTOMER,
       phone: user.phone || '',
     });
     setIsEditModalOpen(true);
@@ -102,7 +102,7 @@ export const Users = () => {
 
   const handleUpdate = async () => {
     // Prevent changing to admin role
-    if (editForm.role === ROLES.ADMIN && selectedUser.role !== ROLES.ADMIN) {
+    if (editForm.role === ROLES.ADMIN && selectedUser.user_role !== ROLES.ADMIN) {
       toast.error('You cannot promote users to admin role');
       return;
     }
@@ -121,7 +121,7 @@ export const Users = () => {
 
   const handleDelete = async (user) => {
     // Prevent deleting admin users
-    if (user.role === ROLES.ADMIN) {
+    if (user.user_role === ROLES.ADMIN) {
       toast.error('Cannot delete admin users');
       return;
     }
@@ -164,10 +164,10 @@ export const Users = () => {
     },
     {
       header: 'Role',
-      accessorKey: 'role',
+      accessorKey: 'user_role',
       cell: (row) => (
-        <Badge variant={getRoleBadgeColor(row.role)}>
-          {ROLE_LABELS[row.role] || row.role}
+        <Badge variant={getRoleBadgeColor(row.user_role)}>
+          {ROLE_LABELS[row.user_role] || row.user_role}
         </Badge>
       ),
     },
@@ -192,8 +192,8 @@ export const Users = () => {
             size="sm" 
             variant="danger" 
             onClick={() => handleDelete(row)}
-            disabled={row.role === ROLES.ADMIN}
-            title={row.role === ROLES.ADMIN ? 'Cannot delete admin users' : 'Delete user'}
+            disabled={row.user_role === ROLES.ADMIN}
+            title={row.user_role === ROLES.ADMIN ? 'Cannot delete admin users' : 'Delete user'}
           >
             Delete
           </Button>
