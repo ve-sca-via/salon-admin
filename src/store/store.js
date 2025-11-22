@@ -25,7 +25,7 @@ const persistConfig = {
   whitelist: [
     'auth',                // ✅ Auth state (just user role/name, no token)
     configApi.reducerPath, // ✅ System config (non-sensitive settings)
-    salonApi.reducerPath,  // ✅ Salon data (includes pending salons for better UX)
+    // salonApi.reducerPath REMOVED - was causing stale data on refresh
   ],
   // DO NOT PERSIST (contains PII or needs to be fresh):
   blacklist: [
@@ -35,6 +35,7 @@ const persistConfig = {
     careerApi.reducerPath,       // 🔴 Contains applicant personal info
     serviceApi.reducerPath,      // Low risk but unnecessary
     staffApi.reducerPath,        // Contains staff personal info
+    salonApi.reducerPath,        // 🔴 Contains salon data - MUST be fresh after mutations
   ],
   // Throttle writes to localStorage (better performance)
   throttle: 1000,

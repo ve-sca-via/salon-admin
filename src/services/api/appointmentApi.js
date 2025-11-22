@@ -26,11 +26,11 @@ export const appointmentApi = createApi({
               { type: 'Appointments', id: 'LIST' },
             ]
           : [{ type: 'Appointments', id: 'LIST' }],
-      keepUnusedDataFor: 120, // Cache for 2 minutes
-      refetchOnFocus: false,
+      keepUnusedDataFor: 60, // Cache for 1 minute (was 2 min)
+      refetchOnFocus: true, // Refetch on focus (was false)
       refetchOnReconnect: true,
-      refetchOnMountOrArgChange: 30, // Refetch if data is older than 30 seconds
-      pollingInterval: 120000, // Poll every 2 minutes when filtered
+      refetchOnMountOrArgChange: true, // ALWAYS refetch when needed
+      pollingInterval: 60000, // Poll every 1 minute (was 2 min)
     }),
 
     // Get single appointment
@@ -50,18 +50,37 @@ export const appointmentApi = createApi({
         method: 'put',
         data: { status },
       }),
-      // Optimistic update
+      // Optimistic update - improved to handle all query variations
       async onQueryStarted({ appointmentId, status }, { dispatch, queryFulfilled }) {
-        const patchResult = dispatch(
-          appointmentApi.util.updateQueryData('getAllAppointments', { status: '' }, (draft) => {
-            const appointment = draft.data?.find(a => a.id === appointmentId);
-            if (appointment) appointment.status = status;
-          })
+        // Update all possible cache entries
+        const patches = [];
+        
+        // Update for unfiltered query
+        patches.push(
+          dispatch(
+            appointmentApi.util.updateQueryData('getAllAppointments', {}, (draft) => {
+              const appointment = draft.data?.find(a => a.id === appointmentId);
+              if (appointment) appointment.status = status;
+            })
+          )
         );
+        
+        // Update for filtered queries (common status filters)
+        ['pending', 'confirmed', 'completed', 'cancelled'].forEach(filterStatus => {
+          patches.push(
+            dispatch(
+              appointmentApi.util.updateQueryData('getAllAppointments', { status: filterStatus }, (draft) => {
+                const appointment = draft.data?.find(a => a.id === appointmentId);
+                if (appointment) appointment.status = status;
+              })
+            )
+          );
+        });
+        
         try {
           await queryFulfilled;
         } catch {
-          patchResult.undo();
+          patches.forEach(patch => patch.undo());
         }
       },
       invalidatesTags: (result, error, { appointmentId }) => [
@@ -76,6 +95,21 @@ export const appointmentApi = createApi({
         url: `/api/v1/admin/bookings/${appointmentId}`,
         method: 'delete',
       }),
+      // Optimistically remove from cache
+      async onQueryStarted(appointmentId, { dispatch, queryFulfilled }) {
+        const patchResult = dispatch(
+          appointmentApi.util.updateQueryData('getAllAppointments', {}, (draft) => {
+            if (draft?.data) {
+              draft.data = draft.data.filter(a => a.id !== appointmentId);
+            }
+          })
+        );
+        try {
+          await queryFulfilled;
+        } catch {
+          patchResult.undo();
+        }
+      },
       invalidatesTags: [{ type: 'Appointments', id: 'LIST' }],
     }),
   }),

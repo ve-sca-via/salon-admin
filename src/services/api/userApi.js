@@ -26,8 +26,10 @@ export const userApi = createApi({
               { type: 'Users', id: 'LIST' },
             ]
           : [{ type: 'Users', id: 'LIST' }],
-      keepUnusedDataFor: 600, // Cache for 10 minutes (rarely changes)
-      refetchOnMountOrArgChange: 60, // Refetch if data is older than 1 minute
+      keepUnusedDataFor: 60, // Cache for 1 minute only (was 10 min)
+      refetchOnMountOrArgChange: true, // ALWAYS refetch when needed
+      refetchOnFocus: true, // Refetch when tab regains focus
+      refetchOnReconnect: true, // Refetch on reconnection
     }),
 
     // Get single user
@@ -47,6 +49,19 @@ export const userApi = createApi({
         method: 'post',
         data: userData,
       }),
+      // Optimistically add user to cache
+      async onQueryStarted(userData, { dispatch, queryFulfilled }) {
+        try {
+          const { data: newUser } = await queryFulfilled;
+          dispatch(
+            userApi.util.updateQueryData('getAllUsers', {}, (draft) => {
+              if (draft?.data) {
+                draft.data.unshift(newUser);
+              }
+            })
+          );
+        } catch {}
+      },
       invalidatesTags: [{ type: 'Users', id: 'LIST' }, 'DashboardStats', 'RecentActivity'],
     }),
 
@@ -57,6 +72,22 @@ export const userApi = createApi({
         method: 'put',
         data,
       }),
+      // Optimistic update for instant UI feedback
+      async onQueryStarted({ userId, data }, { dispatch, queryFulfilled }) {
+        const patchResult = dispatch(
+          userApi.util.updateQueryData('getAllUsers', {}, (draft) => {
+            const user = draft.data?.find(u => u.id === userId);
+            if (user) {
+              Object.assign(user, data);
+            }
+          })
+        );
+        try {
+          await queryFulfilled;
+        } catch {
+          patchResult.undo();
+        }
+      },
       invalidatesTags: (result, error, { userId }) => [
         { type: 'User', id: userId },
         { type: 'Users', id: 'LIST' },
@@ -69,6 +100,21 @@ export const userApi = createApi({
         url: `/api/v1/admin/users/${userId}`,
         method: 'delete',
       }),
+      // Optimistically remove user from cache
+      async onQueryStarted(userId, { dispatch, queryFulfilled }) {
+        const patchResult = dispatch(
+          userApi.util.updateQueryData('getAllUsers', {}, (draft) => {
+            if (draft?.data) {
+              draft.data = draft.data.filter(u => u.id !== userId);
+            }
+          })
+        );
+        try {
+          await queryFulfilled;
+        } catch {
+          patchResult.undo();
+        }
+      },
       invalidatesTags: [{ type: 'Users', id: 'LIST' }, 'DashboardStats'],
     }),
 

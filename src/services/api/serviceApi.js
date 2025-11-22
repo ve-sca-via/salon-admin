@@ -26,7 +26,10 @@ export const serviceApi = createApi({
               { type: 'Services', id: 'LIST' },
             ]
           : [{ type: 'Services', id: 'LIST' }],
-      keepUnusedDataFor: 600, // Cache for 10 minutes (static data)
+      keepUnusedDataFor: 120, // Cache for 2 minutes (services change less frequently)
+      refetchOnMountOrArgChange: true, // ALWAYS refetch
+      refetchOnFocus: true,
+      refetchOnReconnect: true,
     }),
 
     // Get single service

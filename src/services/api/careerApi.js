@@ -21,8 +21,10 @@ export const careerApi = createApi({
         };
       },
       providesTags: ['CareerApplications'],
-      keepUnusedDataFor: 300, // Cache for 5 minutes
-      refetchOnMountOrArgChange: 60, // Refetch if data is older than 1 minute
+      keepUnusedDataFor: 60, // Cache for 1 minute
+      refetchOnMountOrArgChange: true, // ALWAYS refetch
+      refetchOnFocus: true,
+      refetchOnReconnect: true,
     }),
 
     // Get single application

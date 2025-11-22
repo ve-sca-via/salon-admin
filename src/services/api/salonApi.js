@@ -26,8 +26,10 @@ export const salonApi = createApi({
               { type: 'Salons', id: 'LIST' },
             ]
           : [{ type: 'Salons', id: 'LIST' }],
-      keepUnusedDataFor: 300, // Cache for 5 minutes
-      refetchOnMountOrArgChange: 30, // Refetch if data is older than 30 seconds
+      keepUnusedDataFor: 60, // Cache for 1 minute only (was 5 min)
+      refetchOnMountOrArgChange: true, // ALWAYS refetch on mount or when invalidated
+      refetchOnFocus: true, // Refetch when tab regains focus
+      refetchOnReconnect: true, // Refetch on network reconnection
     }),
 
     // Get pending salons (vendor join requests)
@@ -38,11 +40,11 @@ export const salonApi = createApi({
         params: { status_filter: 'pending', limit, offset },
       }),
       providesTags: ['PendingSalons'],
-      keepUnusedDataFor: 180, // Cache for 3 minutes (now persisted to localStorage)
-      refetchOnFocus: false, // Using Supabase real-time instead
+      keepUnusedDataFor: 60, // Cache for 1 minute (was 3 min)
+      refetchOnFocus: true, // Refetch on focus for latest data
       refetchOnReconnect: true,
-      refetchOnMountOrArgChange: 60, // Only refetch if data is older than 60 seconds
-      pollingInterval: 60000, // Poll every 60 seconds for updates (reduced from 30s)
+      refetchOnMountOrArgChange: true, // ALWAYS refetch when needed
+      pollingInterval: 30000, // Poll every 30 seconds (reduced from 60s)
     }),
 
     // Get single salon details
@@ -62,6 +64,21 @@ export const salonApi = createApi({
         method: 'post',
         data: { admin_notes: adminNotes },
       }),
+      // Optimistically remove from pending list
+      async onQueryStarted({ requestId }, { dispatch, queryFulfilled }) {
+        const patchResult = dispatch(
+          salonApi.util.updateQueryData('getPendingSalons', {}, (draft) => {
+            if (draft?.data) {
+              draft.data = draft.data.filter(r => r.id !== requestId);
+            }
+          })
+        );
+        try {
+          await queryFulfilled;
+        } catch {
+          patchResult.undo();
+        }
+      },
       invalidatesTags: ['PendingSalons', { type: 'Salons', id: 'LIST' }, 'DashboardStats', 'RecentActivity'],
     }),
 
@@ -72,6 +89,21 @@ export const salonApi = createApi({
         method: 'post',
         data: { admin_notes: adminNotes },
       }),
+      // Optimistically remove from pending list
+      async onQueryStarted({ requestId }, { dispatch, queryFulfilled }) {
+        const patchResult = dispatch(
+          salonApi.util.updateQueryData('getPendingSalons', {}, (draft) => {
+            if (draft?.data) {
+              draft.data = draft.data.filter(r => r.id !== requestId);
+            }
+          })
+        );
+        try {
+          await queryFulfilled;
+        } catch {
+          patchResult.undo();
+        }
+      },
       invalidatesTags: ['PendingSalons', 'DashboardStats', 'RecentActivity'],
     }),
 
@@ -82,6 +114,22 @@ export const salonApi = createApi({
         method: 'put',
         data,
       }),
+      // Optimistic update for instant UI feedback
+      async onQueryStarted({ salonId, data }, { dispatch, queryFulfilled }) {
+        const patchResult = dispatch(
+          salonApi.util.updateQueryData('getAllSalons', {}, (draft) => {
+            const salon = draft.data?.find(s => s.id === salonId);
+            if (salon) {
+              Object.assign(salon, data);
+            }
+          })
+        );
+        try {
+          await queryFulfilled;
+        } catch {
+          patchResult.undo();
+        }
+      },
       invalidatesTags: (result, error, { salonId }) => [
         { type: 'Salon', id: salonId },
         { type: 'Salons', id: 'LIST' },

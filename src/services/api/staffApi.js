@@ -26,7 +26,10 @@ export const staffApi = createApi({
               { type: 'Staff', id: 'LIST' },
             ]
           : [{ type: 'Staff', id: 'LIST' }],
-      keepUnusedDataFor: 300, // Cache for 5 minutes
+      keepUnusedDataFor: 60, // Cache for 1 minute
+      refetchOnMountOrArgChange: true, // ALWAYS refetch
+      refetchOnFocus: true,
+      refetchOnReconnect: true,
     }),
 
     // Get single staff member
