@@ -253,34 +253,9 @@ export const PendingSalons = () => {
         </div>
       )}
       
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Pending Salon Submissions</h1>
-          <p className="text-gray-600 mt-1">Review and approve salon submissions from relationship managers</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <Button 
-            variant="outline" 
-            onClick={() => refetch()}
-            disabled={isLoading}
-            className="flex items-center gap-2"
-          >
-            {isLoading ? (
-              <>
-                <div className="animate-spin h-4 w-4 border-2 border-gray-400 border-t-transparent rounded-full"></div>
-                <span>Refreshing...</span>
-              </>
-            ) : (
-              <>
-                <span>🔄</span>
-                <span>Refresh</span>
-              </>
-            )}
-          </Button>
-          <div className="bg-yellow-100 text-yellow-800 px-4 py-2 rounded-lg font-semibold">
-            {pendingRequests.length} Pending
-          </div>
-        </div>
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900">Pending Salon Submissions</h1>
+        <p className="text-gray-600 mt-1">Review and approve salon submissions from relationship managers</p>
       </div>
 
       <Card>
