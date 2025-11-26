@@ -383,6 +383,31 @@ export const PendingSalons = () => {
               </div>
             )}
 
+            {/* Services from documents.services */}
+            {selectedRequest.documents?.services && Array.isArray(selectedRequest.documents.services) && selectedRequest.documents.services.length > 0 && (
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-3">Services Offered</h3>
+                <div className="bg-purple-50 p-4 rounded-lg">
+                  <div className="space-y-2">
+                    {selectedRequest.documents.services.map((service, idx) => (
+                      <div key={idx} className="bg-white p-3 rounded-lg border border-purple-200 flex justify-between items-center">
+                        <div className="flex-1">
+                          <span className="font-medium text-gray-900">{service.name}</span>
+                          {service.description && (
+                            <p className="text-xs text-gray-600 mt-1">{service.description}</p>
+                          )}
+                        </div>
+                        <div className="text-right ml-4">
+                          <p className="font-semibold text-purple-600">₹{service.price}</p>
+                          <p className="text-xs text-gray-500">{service.duration_minutes} min</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Additional Documents */}
             {selectedRequest.documents && Object.keys(selectedRequest.documents).length > 0 && (
               <div>
@@ -390,7 +415,8 @@ export const PendingSalons = () => {
                 <div className="bg-gray-100 p-4 rounded-lg space-y-3">
                   {Object.entries(selectedRequest.documents)
                     .filter(([key, value]) => {
-                      // Filter out empty values
+                      // Skip services (rendered separately above) and empty values
+                      if (key === 'services') return false;
                       if (value === null || value === undefined) return false;
                       if (typeof value === 'string' && !value.trim()) return false;
                       return true;
@@ -422,6 +448,7 @@ export const PendingSalons = () => {
                     ))}
                   {Object.entries(selectedRequest.documents)
                     .filter(([key, value]) => {
+                      if (key === 'services') return false;
                       if (value === null || value === undefined) return false;
                       if (typeof value === 'string' && !value.trim()) return false;
                       return true;
@@ -462,16 +489,25 @@ export const PendingSalons = () => {
             )}
 
             {/* Photos */}
-            {(selectedRequest.cover_image_url || (selectedRequest.gallery_images && selectedRequest.gallery_images.length > 0)) && (
+            {(selectedRequest.documents?.logo || selectedRequest.cover_image_url || (selectedRequest.gallery_images && selectedRequest.gallery_images.length > 0)) && (
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-3">Photos</h3>
                 <div className="grid grid-cols-3 gap-4">
+                  {/* Logo */}
+                  {selectedRequest.documents?.logo && (
+                    <div className="col-span-1">
+                      <p className="text-sm text-gray-600 mb-2">Logo</p>
+                      <img src={selectedRequest.documents.logo} alt="Logo" className="w-full h-32 object-contain bg-gray-50 rounded-lg border border-gray-200 p-2" />
+                    </div>
+                  )}
+                  {/* Cover Image */}
                   {selectedRequest.cover_image_url && (
-                    <div className="col-span-3">
+                    <div className={selectedRequest.documents?.logo ? "col-span-2" : "col-span-3"}>
                       <p className="text-sm text-gray-600 mb-2">Cover Image</p>
                       <img src={selectedRequest.cover_image_url} alt="Cover" className="w-full h-48 object-cover rounded-lg" />
                     </div>
                   )}
+                  {/* Gallery Images */}
                   {selectedRequest.gallery_images && Array.isArray(selectedRequest.gallery_images) && selectedRequest.gallery_images.map((img, idx) => (
                     <div key={idx}>
                       <p className="text-sm text-gray-600 mb-2">Gallery {idx + 1}</p>

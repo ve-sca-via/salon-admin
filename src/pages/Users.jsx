@@ -35,7 +35,7 @@ export const Users = () => {
     password: '',
     full_name: '',
     phone: '',
-    role: ROLES.CUSTOMER
+    role: ROLES.RELATIONSHIP_MANAGER
   });
 
   const handleSearch = (e) => {
@@ -83,7 +83,7 @@ export const Users = () => {
         password: '',
         full_name: '',
         phone: '',
-        role: ROLES.CUSTOMER
+        role: ROLES.RELATIONSHIP_MANAGER
       });
     } catch (error) {
       toast.error(error?.data?.detail || 'Failed to create user');
@@ -213,7 +213,7 @@ export const Users = () => {
           onClick={() => setIsCreateModalOpen(true)}
           className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
         >
-          Create User
+          Create Relationship Manager
         </button>
       </div>
 
@@ -295,16 +295,16 @@ export const Users = () => {
         isOpen={isCreateModalOpen}
         onClose={() => {
           setIsCreateModalOpen(false);
-          setCreateForm({ email: '', password: '', full_name: '', phone: '', role: ROLES.CUSTOMER });
+          setCreateForm({ email: '', password: '', full_name: '', phone: '', role: ROLES.RELATIONSHIP_MANAGER });
         }}
-        title="Create New User"
+        title="Create New Relationship Manager"
         footer={
           <div className="flex justify-end gap-2">
             <Button variant="outline" onClick={() => setIsCreateModalOpen(false)}>
               Cancel
             </Button>
             <Button variant="primary" onClick={handleCreateUser} disabled={isCreating}>
-              {isCreating ? 'Creating...' : 'Create User'}
+              {isCreating ? 'Creating...' : 'Create Relationship Manager'}
             </Button>
           </div>
         }
@@ -322,8 +322,6 @@ export const Users = () => {
           />
           <p className="text-xs text-gray-500 -mt-2">
             <strong>Relationship Manager:</strong> Field agents who manage salon relationships and vendor approvals.
-            <br />
-            <strong>Customer:</strong> Regular app users who book appointments.
           </p>
 
           <div className="border-t pt-4">
@@ -383,7 +381,7 @@ export const Users = () => {
 
           <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
             <p className="text-sm text-blue-800">
-              <strong>Note:</strong> Admin accounts cannot be created through this interface for security reasons. The user will receive an email confirmation after account creation.
+              <strong>Note:</strong> Only Relationship Managers can be created through this interface. Customer accounts are created when users sign up through the mobile app. Admin accounts cannot be created for security reasons.
             </p>
           </div>
         </div>

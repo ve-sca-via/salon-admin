@@ -19,7 +19,7 @@ export const ROLE_LABELS = {
 };
 
 // Roles that admin can create (admin cannot create other admins)
-export const CREATABLE_ROLES = [ROLES.RELATIONSHIP_MANAGER, ROLES.CUSTOMER];
+export const CREATABLE_ROLES = [ROLES.RELATIONSHIP_MANAGER];
 
 // Appointment Statuses
 export const APPOINTMENT_STATUS = {
