@@ -37,40 +37,95 @@ export const Users = () => {
     phone: '',
     role: ROLES.RELATIONSHIP_MANAGER
   });
+  const [showPassword, setShowPassword] = useState(false);
+  const [formErrors, setFormErrors] = useState({});
 
   const handleSearch = (e) => {
     setSearch(e.target.value);
   };
 
+  const validatePassword = (password) => {
+    const errors = [];
+    if (password.length < 8) {
+      errors.push('at least 8 characters');
+    }
+    if (!/[A-Z]/.test(password)) {
+      errors.push('one uppercase letter');
+    }
+    if (!/[a-z]/.test(password)) {
+      errors.push('one lowercase letter');
+    }
+    if (!/[0-9]/.test(password)) {
+      errors.push('one number');
+    }
+    return errors;
+  };
+
+  const generateStrongPassword = () => {
+    const uppercase = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+    const lowercase = 'abcdefghijkmnpqrstuvwxyz';
+    const numbers = '23456789';
+    const special = '@#$!&';
+    
+    // Ensure at least one of each required type
+    let password = '';
+    password += uppercase[Math.floor(Math.random() * uppercase.length)];
+    password += lowercase[Math.floor(Math.random() * lowercase.length)];
+    password += numbers[Math.floor(Math.random() * numbers.length)];
+    password += special[Math.floor(Math.random() * special.length)];
+    
+    // Fill remaining characters randomly
+    const allChars = uppercase + lowercase + numbers + special;
+    for (let i = 4; i < 12; i++) {
+      password += allChars[Math.floor(Math.random() * allChars.length)];
+    }
+    
+    // Shuffle the password
+    return password.split('').sort(() => Math.random() - 0.5).join('');
+  };
+
   const handleCreateUser = async () => {
+    // Clear previous errors
+    setFormErrors({});
+    const errors = {};
+
     // Validation
-    if (!createForm.email || !createForm.password || !createForm.full_name) {
-      toast.error('Email, password, and full name are required');
-      return;
+    if (!createForm.email) {
+      errors.email = 'Email is required';
+    } else {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(createForm.email)) {
+        errors.email = 'Please enter a valid email address';
+      }
     }
 
-    // Email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(createForm.email)) {
-      toast.error('Please enter a valid email address');
-      return;
+    if (!createForm.password) {
+      errors.password = 'Password is required';
+    } else {
+      const passwordErrors = validatePassword(createForm.password);
+      if (passwordErrors.length > 0) {
+        errors.password = `Password must contain ${passwordErrors.join(', ')}`;
+      }
     }
 
-    // Password validation
-    if (createForm.password.length < 6) {
-      toast.error('Password must be at least 6 characters');
-      return;
+    if (!createForm.full_name || createForm.full_name.trim() === '') {
+      errors.full_name = 'Full name is required';
     }
 
     // Phone validation (if provided)
     if (createForm.phone && createForm.phone.length < 10) {
-      toast.error('Phone number must be at least 10 digits');
-      return;
+      errors.phone = 'Phone number must be at least 10 digits';
     }
 
     // Role validation
     if (createForm.role === ROLES.ADMIN) {
-      toast.error('You cannot create admin users');
+      errors.role = 'You cannot create admin users';
+    }
+
+    // If there are validation errors, show them and return
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
+      toast.error('Please fix the form errors before submitting');
       return;
     }
 
@@ -85,8 +140,47 @@ export const Users = () => {
         phone: '',
         role: ROLES.RELATIONSHIP_MANAGER
       });
+      setShowPassword(false);
+      setFormErrors({});
     } catch (error) {
-      toast.error(error?.data?.detail || 'Failed to create user');
+      console.error('Create user error:', error);
+      
+      // Handle specific error cases
+      let errorMessage = 'Failed to create user';
+      
+      if (error?.data?.detail) {
+        const detail = error.data.detail;
+        
+        // Check for duplicate email error (backend returns "User with email X already exists")
+        if (typeof detail === 'string') {
+          if (detail.toLowerCase().includes('already exists')) {
+            errorMessage = 'A user with this email already exists. Please use a different email address.';
+          } else if (detail.toLowerCase().includes('duplicate') ||
+              detail.toLowerCase().includes('unique constraint')) {
+            errorMessage = 'A user with this email already exists. Please use a different email address.';
+          } else if (detail.toLowerCase().includes('invalid email')) {
+            errorMessage = 'The email address format is invalid.';
+          } else if (detail.toLowerCase().includes('password')) {
+            errorMessage = 'Password does not meet requirements.';
+          } else {
+            errorMessage = detail;
+          }
+        }
+      } else if (error?.status === 409) {
+        errorMessage = 'A user with this email already exists. Please use a different email address.';
+      } else if (error?.status === 400) {
+        // Check if the error message contains info about duplicate email
+        const errorText = JSON.stringify(error);
+        if (errorText.toLowerCase().includes('already exists')) {
+          errorMessage = 'A user with this email already exists. Please use a different email address.';
+        } else {
+          errorMessage = 'Invalid input. Please check all fields and try again.';
+        }
+      } else if (error?.status === 500) {
+        errorMessage = 'Server error. Please try again later.';
+      }
+      
+      toast.error(errorMessage);
     }
   };
 
@@ -210,7 +304,16 @@ export const Users = () => {
           <p className="mt-1 text-sm text-gray-500">Manage all user accounts</p>
         </div>
         <button
-          onClick={() => setIsCreateModalOpen(true)}
+          onClick={() => {
+            setCreateForm({
+              email: '',
+              password: generateStrongPassword(),
+              full_name: '',
+              phone: '',
+              role: ROLES.RELATIONSHIP_MANAGER
+            });
+            setIsCreateModalOpen(true);
+          }}
           className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
         >
           Create Relationship Manager
@@ -295,12 +398,31 @@ export const Users = () => {
         isOpen={isCreateModalOpen}
         onClose={() => {
           setIsCreateModalOpen(false);
-          setCreateForm({ email: '', password: '', full_name: '', phone: '', role: ROLES.RELATIONSHIP_MANAGER });
+          setCreateForm({ 
+            email: '', 
+            password: generateStrongPassword(), 
+            full_name: '', 
+            phone: '', 
+            role: ROLES.RELATIONSHIP_MANAGER 
+          });
+          setShowPassword(false);
+          setFormErrors({});
         }}
         title="Create New Relationship Manager"
         footer={
           <div className="flex justify-end gap-2">
-            <Button variant="outline" onClick={() => setIsCreateModalOpen(false)}>
+            <Button variant="outline" onClick={() => {
+              setIsCreateModalOpen(false);
+              setCreateForm({ 
+                email: '', 
+                password: generateStrongPassword(), 
+                full_name: '', 
+                phone: '', 
+                role: ROLES.RELATIONSHIP_MANAGER 
+              });
+              setShowPassword(false);
+              setFormErrors({});
+            }}>
               Cancel
             </Button>
             <Button variant="primary" onClick={handleCreateUser} disabled={isCreating}>
@@ -314,11 +436,17 @@ export const Users = () => {
           <Select
             label="User Role *"
             value={createForm.role}
-            onChange={(e) => setCreateForm({ ...createForm, role: e.target.value })}
+            onChange={(e) => {
+              setCreateForm({ ...createForm, role: e.target.value });
+              if (formErrors.role) {
+                setFormErrors({ ...formErrors, role: undefined });
+              }
+            }}
             options={CREATABLE_ROLES.map(role => ({
               value: role,
               label: ROLE_LABELS[role]
             }))}
+            error={formErrors.role}
           />
           <p className="text-xs text-gray-500 -mt-2">
             <strong>Relationship Manager:</strong> Field agents who manage salon relationships and vendor approvals.
@@ -332,24 +460,72 @@ export const Users = () => {
                 label="Email Address *"
                 type="email"
                 value={createForm.email}
-                onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })}
+                onChange={(e) => {
+                  setCreateForm({ ...createForm, email: e.target.value });
+                  if (formErrors.email) {
+                    setFormErrors({ ...formErrors, email: undefined });
+                  }
+                }}
                 placeholder="user@example.com"
+                error={formErrors.email}
                 required
               />
               <p className="text-xs text-gray-500 -mt-2">
                 This will be used for login and notifications
               </p>
 
-              <Input
-                label="Password *"
-                type="password"
-                value={createForm.password}
-                onChange={(e) => setCreateForm({ ...createForm, password: e.target.value })}
-                placeholder="Minimum 6 characters"
-                required
-              />
+              <div className="space-y-2">
+                <div className="relative">
+                  <Input
+                    label="Password *"
+                    type={showPassword ? "text" : "password"}
+                    value={createForm.password}
+                    onChange={(e) => {
+                      setCreateForm({ ...createForm, password: e.target.value });
+                      if (formErrors.password) {
+                        setFormErrors({ ...formErrors, password: undefined });
+                      }
+                    }}
+                    placeholder="Enter a strong password"
+                    error={formErrors.password}
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-9 text-gray-500 hover:text-gray-700 focus:outline-none"
+                    title={showPassword ? "Hide password" : "Show password"}
+                  >
+                    {showPassword ? (
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M3.98 8.223A10.477 10.477 0 001.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0112 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 01-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 10-4.243-4.243m4.242 4.242L9.88 9.88" />
+                      </svg>
+                    ) : (
+                      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                    )}
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const newPassword = generateStrongPassword();
+                    setCreateForm({ ...createForm, password: newPassword });
+                    setShowPassword(true);
+                    toast.success('New password generated!');
+                  }}
+                  className="text-sm text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+                  </svg>
+                  Generate New Password
+                </button>
+              </div>
               <p className="text-xs text-gray-500 -mt-2">
-                User can change this after first login
+                Must contain at least 8 characters with uppercase, lowercase, and number. User can change this after first login.
               </p>
             </div>
           </div>
@@ -361,8 +537,14 @@ export const Users = () => {
               <Input
                 label="Full Name *"
                 value={createForm.full_name}
-                onChange={(e) => setCreateForm({ ...createForm, full_name: e.target.value })}
+                onChange={(e) => {
+                  setCreateForm({ ...createForm, full_name: e.target.value });
+                  if (formErrors.full_name) {
+                    setFormErrors({ ...formErrors, full_name: undefined });
+                  }
+                }}
                 placeholder="Enter full name"
+                error={formErrors.full_name}
                 required
               />
 
@@ -370,8 +552,14 @@ export const Users = () => {
                 label="Phone Number"
                 type="tel"
                 value={createForm.phone}
-                onChange={(e) => setCreateForm({ ...createForm, phone: e.target.value })}
+                onChange={(e) => {
+                  setCreateForm({ ...createForm, phone: e.target.value });
+                  if (formErrors.phone) {
+                    setFormErrors({ ...formErrors, phone: undefined });
+                  }
+                }}
                 placeholder="Enter phone number (optional)"
+                error={formErrors.phone}
               />
               <p className="text-xs text-gray-500 -mt-2">
                 Optional, but recommended for better communication
