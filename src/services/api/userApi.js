@@ -129,6 +129,43 @@ export const userApi = createApi({
       keepUnusedDataFor: 300,
     }),
 
+    // Update RM profile (admin)
+    updateRMProfile: builder.mutation({
+      query: ({ rmId, data }) => ({
+        url: `/api/v1/admin/rms/${rmId}`,
+        method: 'put',
+        data,
+      }),
+      // Optimistic update for instant UI feedback
+      async onQueryStarted({ rmId, data }, { dispatch, queryFulfilled }) {
+        const patchResult = dispatch(
+          userApi.util.updateQueryData('getAllRMs', {}, (draft) => {
+            const rm = draft?.data?.find(r => r.id === rmId) || draft?.find(r => r.id === rmId);
+            if (rm) {
+              // Update profile fields
+              if (rm.profiles) {
+                if (data.full_name) rm.profiles.full_name = data.full_name;
+                if (data.phone) rm.profiles.phone = data.phone;
+                if (data.email) rm.profiles.email = data.email;
+                if (data.is_active !== undefined) rm.profiles.is_active = data.is_active;
+              }
+              // Update RM-specific fields
+              if (data.employee_id !== undefined) rm.employee_id = data.employee_id;
+              if (data.assigned_territories) rm.assigned_territories = data.assigned_territories;
+              if (data.joining_date) rm.joining_date = data.joining_date;
+              if (data.manager_notes !== undefined) rm.manager_notes = data.manager_notes;
+            }
+          })
+        );
+        try {
+          await queryFulfilled;
+        } catch {
+          patchResult.undo();
+        }
+      },
+      invalidatesTags: ['RMs', { type: 'Users', id: 'LIST' }],
+    }),
+
     // Update RM status
     updateRMStatus: builder.mutation({
       query: ({ rmId, isActive }) => ({
@@ -148,5 +185,6 @@ export const {
   useUpdateUserMutation,
   useDeleteUserMutation,
   useGetAllRMsQuery,
+  useUpdateRMProfileMutation,
   useUpdateRMStatusMutation,
 } = userApi;
