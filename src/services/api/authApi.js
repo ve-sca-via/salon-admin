@@ -56,7 +56,6 @@ export const logout = async () => {
       );
     }
   } catch (error) {
-    console.error('Logout error:', error);
     // Continue with local cleanup even if backend call fails
   } finally {
     // Always clear local storage

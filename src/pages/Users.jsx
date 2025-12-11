@@ -143,8 +143,6 @@ export const Users = () => {
       setShowPassword(false);
       setFormErrors({});
     } catch (error) {
-      console.error('Create user error:', error);
-      
       // Handle specific error cases
       let errorMessage = 'Failed to create user';
       

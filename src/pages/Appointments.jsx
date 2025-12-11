@@ -26,6 +26,7 @@ export const Appointments = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [editForm, setEditForm] = useState({});
+  const [loggedRows] = useState(new Set()); // Track logged rows
 
   const handleEdit = (appointment) => {
     setSelectedAppointment(appointment);
@@ -54,31 +55,65 @@ export const Appointments = () => {
       header: 'Customer',
       cell: (row) => (
         <div>
-          <div className="font-medium text-gray-900">{row.user?.full_name || 'N/A'}</div>
-          <div className="text-sm text-gray-500">{row.user?.email}</div>
+          <div className="font-medium text-gray-900">
+            {row.profiles?.full_name || row.customer_name || 'N/A'}
+          </div>
+          <div className="text-sm text-gray-500">
+            {row.profiles?.email || row.customer_email || ''}
+          </div>
         </div>
       ),
     },
     {
       header: 'Salon',
-      cell: (row) => (
-        <div>
-          <div className="font-medium text-gray-900">{row.salon_name}</div>
-          <div className="text-sm text-gray-500">{row.salon?.location || ''}</div>
-        </div>
-      ),
+      cell: (row) => {
+        }
+        
+        // Try multiple possible field structures
+        const salonName = row.salons?.business_name 
+          || row.salon?.business_name 
+          || row.salon_name 
+          || row.salons?.name
+          || row.salon?.name
+          || (row.salon_id ? `Salon #${row.salon_id}` : 'N/A');
+        const salonCity = row.salons?.city || row.salon?.city || row.salon_city || row.salons?.address || '';
+        
+        return (
+          <div>
+            <div className="font-medium text-gray-900">
+              {salonName}
+            </div>
+            {salonCity && (
+              <div className="text-sm text-gray-500">
+                {salonCity}
+              </div>
+            )}
+          </div>
+        );
+      },
     },
     {
       header: 'Services',
       cell: (row) => {
         const services = Array.isArray(row.services) ? row.services : [];
+        const serviceNames = services.map(s => s.service_name || s.name).filter(Boolean);
+        
         return (
           <div>
             <div className="font-medium text-gray-900">
-              {services.length} service{services.length !== 1 ? 's' : ''}
+              {serviceNames.length > 0 ? (
+                <>
+                  {serviceNames[0]}
+                  {serviceNames.length > 1 && (
+                    <span className="text-xs text-gray-500"> +{serviceNames.length - 1} more</span>
+                  )}
+                </>
+              ) : (
+                `${services.length} service${services.length !== 1 ? 's' : ''}`
+              )}
             </div>
             <div className="text-sm text-gray-500">
-              ${row.final_amount || row.total_amount}
+              ${row.final_amount || row.total_amount || 0}
             </div>
           </div>
         );
@@ -104,9 +139,22 @@ export const Appointments = () => {
     {
       header: 'Actions',
       cell: (row) => (
-        <Button size="sm" variant="outline" onClick={() => handleEdit(row)}>
-          Edit
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            size="sm" 
+            variant="outline" 
+            onClick={() => handleEdit(row)}
+          >
+            View
+          </Button>
+          <Button 
+            size="sm" 
+            variant="primary" 
+            onClick={() => handleEdit(row)}
+          >
+            Edit
+          </Button>
+        </div>
       ),
     },
   ];
@@ -179,10 +227,15 @@ export const Appointments = () => {
           <div className="bg-gray-50 p-4 rounded-lg">
             <h4 className="font-medium text-gray-900 mb-2">Appointment Details</h4>
             <div className="text-sm text-gray-600 space-y-1">
-              <p><strong>Customer:</strong> {selectedAppointment?.user?.full_name}</p>
-              <p><strong>Service:</strong> {selectedAppointment?.service?.name}</p>
-              <p><strong>Staff:</strong> {selectedAppointment?.staff?.full_name}</p>
-              <p><strong>Date:</strong> {selectedAppointment?.appointment_date && format(new Date(selectedAppointment.appointment_date), 'MMM dd, yyyy')}</p>
+              <p><strong>Customer:</strong> {selectedAppointment?.profiles?.full_name || selectedAppointment?.customer_name || 'N/A'}</p>
+              <p><strong>Service(s):</strong> {(() => {
+                const services = Array.isArray(selectedAppointment?.services) ? selectedAppointment.services : [];
+                const names = services.map(s => s.service_name || s.name).filter(Boolean);
+                return names.length > 0 ? names.join(', ') : 'N/A';
+              })()}</p>
+              <p><strong>Salon:</strong> {selectedAppointment?.salons?.business_name || selectedAppointment?.salon?.business_name || selectedAppointment?.salon_name || 'N/A'}</p>
+              <p><strong>Date:</strong> {selectedAppointment?.booking_date && format(new Date(selectedAppointment.booking_date), 'MMM dd, yyyy')} at {selectedAppointment?.booking_time || 'N/A'}</p>
+              <p><strong>Amount:</strong> ${selectedAppointment?.total_amount || selectedAppointment?.final_amount || 0}</p>
             </div>
           </div>
 

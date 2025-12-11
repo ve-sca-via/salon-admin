@@ -77,7 +77,6 @@ export const RMManagement = () => {
       setIsEditModalOpen(false);
       setSelectedRM(null);
     } catch (error) {
-      console.error('Failed to update RM:', error);
       toast.error(error?.data?.detail || 'Failed to update RM profile');
     }
   };

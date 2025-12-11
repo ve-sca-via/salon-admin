@@ -91,8 +91,6 @@ export const persistor = persistStore(store);
 if (import.meta.env.DEV) {
   window.store = store;
   window.persistor = persistor;
-  console.log('🛠️ Store exposed as window.store for debugging');
-  console.log('💾 Persistor exposed as window.persistor for debugging');
 }
 
 export default store;

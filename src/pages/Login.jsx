@@ -31,7 +31,6 @@ export const Login = () => {
       toast.success('Login successful!');
       navigate('/');
     } catch (error) {
-      console.error('Login error:', error);
       toast.error(error.message || 'Failed to login');
       dispatch(setError(error.message));
     } finally {
@@ -56,7 +55,7 @@ export const Login = () => {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
             </svg>
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 font-display">SalonHub Admin</h1>
+          <h1 className="text-3xl font-bold text-gray-900 font-display">Lubist Admin</h1>
           <p className="mt-2 text-gray-600">Sign in to access your dashboard</p>
         </div>
 

@@ -93,7 +93,6 @@ export const Header = () => {
       toast.success('Logged out successfully');
       navigate('/login');
     } catch (error) {
-      console.error('Logout error:', error);
       toast.error('Error logging out');
       
       // Still clear local state even if API call fails

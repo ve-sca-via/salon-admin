@@ -19,7 +19,6 @@ export const ProtectedRoute = () => {
           dispatch(setUser(response.user));
         })
         .catch(error => {
-          console.error('Failed to get user:', error);
           dispatch(setError(error.message));
           // Only clear auth-related items, not all localStorage
           localStorage.removeItem('access_token');

@@ -46,7 +46,6 @@ export const SystemConfig = () => {
       toast.success('Configuration updated successfully');
       setEditingId(null);
     } catch (error) {
-      console.error('Error updating config:', error);
       toast.error(error.message || 'Failed to update configuration');
     } finally {
       setSaving(false);
@@ -62,7 +61,6 @@ export const SystemConfig = () => {
       await deleteConfig(configKey).unwrap();
       toast.success('Configuration deleted successfully');
     } catch (error) {
-      console.error('Error deleting config:', error);
       toast.error(error.message || 'Failed to delete configuration');
     }
   };
@@ -90,7 +88,6 @@ export const SystemConfig = () => {
         is_active: true
       });
     } catch (error) {
-      console.error('Error creating config:', error);
       toast.error(error?.data?.detail || error.message || 'Failed to create configuration');
     } finally {
       setSaving(false);

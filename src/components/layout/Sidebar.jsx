@@ -38,7 +38,6 @@ export const Sidebar = () => {
           filter: 'status=eq.pending',
         },
         (payload) => {
-          console.log('Sidebar: New submission detected', payload);
           setHasNewNotification(true);
           
           // Remove animation after 3 seconds
@@ -190,7 +189,7 @@ export const Sidebar = () => {
     <div className="flex flex-col w-64 bg-white h-screen border-r border-gray-200 shadow-sm">
       {/* Logo */}
       <div className="flex items-center justify-center h-16 border-b border-gray-200 bg-gradient-to-r from-orange-500 to-orange-600">
-        <h1 className="text-xl font-display font-bold text-white">SalonHub</h1>
+        <h1 className="text-xl font-display font-bold text-white">Lubist</h1>
       </div>
 
       {/* Navigation */}
@@ -231,7 +230,7 @@ export const Sidebar = () => {
       {/* Footer */}
       <div className="p-4 border-t border-gray-200">
         <div className="text-xs text-gray-500 text-center font-body">
-          © 2024 SalonHub Admin
+          © 2025 Lubist Admin
         </div>
       </div>
     </div>

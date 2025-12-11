@@ -19,10 +19,6 @@ export const Dashboard = () => {
     return <LoadingSpinner size="xl" className="min-h-screen" />;
   }
   
-  if (error) {
-    console.error('Dashboard Stats Error:', error);
-  }
-
   const userGrowth = (stats.new_users_this_month || 0) - (stats.new_users_last_month || 0);
   const userTrend = userGrowth >= 0 ? 'up' : 'down';
 

@@ -42,7 +42,6 @@ function AppContent() {
           dispatch(setLoading(false));
         }
       } catch (error) {
-        console.error('Error checking session:', error);
         dispatch(setLoading(false));
       }
     };

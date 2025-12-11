@@ -75,7 +75,6 @@ const OptimizedImage = ({
   };
 
   const handleError = (e) => {
-    console.error(`Failed to load image: ${src}`);
     setHasError(true);
     setCurrentSrc(fallbackSrc);
     if (onError) onError(e);

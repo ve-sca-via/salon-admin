@@ -112,7 +112,6 @@ export const PendingSalons = () => {
       setApprovalNotes('');
       setSelectedRequest(null);
     } catch (error) {
-      console.error('Error approving request:', error);
       toast.error(error?.data?.detail || 'Failed to approve salon submission');
     } finally {
       setProcessing(false);
@@ -138,7 +137,6 @@ export const PendingSalons = () => {
       setRejectionReason('');
       setSelectedRequest(null);
     } catch (error) {
-      console.error('Error rejecting request:', error);
       toast.error(error?.data?.detail || 'Failed to reject salon submission');
     } finally {
       setProcessing(false);
