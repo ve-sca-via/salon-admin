@@ -67,8 +67,6 @@ export const Appointments = () => {
     {
       header: 'Salon',
       cell: (row) => {
-        }
-        
         // Try multiple possible field structures
         const salonName = row.salons?.business_name 
           || row.salon?.business_name 
