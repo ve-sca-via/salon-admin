@@ -19,10 +19,10 @@ export const adminApi = createApi({
         method: 'get',
       }),
       providesTags: ['DashboardStats'],
-      keepUnusedDataFor: 60, // Cache for 1 minute only
-      refetchOnFocus: true, // Refetch when tab regains focus
-      refetchOnReconnect: true, // Refetch when network reconnects
-      refetchOnMountOrArgChange: true, // Always refetch on mount or arg change
+      keepUnusedDataFor: 180, // Cache for 3 minutes (optimized from 60s)
+      refetchOnFocus: false, // Don't refetch on tab focus (optimized - was true)
+      refetchOnReconnect: true, // Keep this - important for reliability
+      refetchOnMountOrArgChange: 120, // Only refetch if data is 2+ min old (optimized - was true)
     }),
     
     // Get recent activity logs
@@ -33,9 +33,9 @@ export const adminApi = createApi({
         params: { limit },
       }),
       providesTags: ['RecentActivity'],
-      keepUnusedDataFor: 60, // Cache for 1 minute
-      refetchOnMountOrArgChange: true, // Always refetch
-      refetchOnFocus: true, // Refetch when tab regains focus
+      keepUnusedDataFor: 180, // Cache for 3 minutes (optimized from 60s)
+      refetchOnMountOrArgChange: 120, // Only refetch if 2+ min old (optimized - was true)
+      refetchOnFocus: false, // Don't refetch on tab focus (optimized - was true)
     }),
   }),
 });
