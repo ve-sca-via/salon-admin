@@ -9,9 +9,6 @@ const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
 
 const axiosInstance = axios.create({
   baseURL: BACKEND_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
   timeout: 30000, // 30 seconds
 });
 
@@ -180,14 +177,26 @@ axiosInstance.interceptors.response.use(
  */
 const axiosBaseQuery =
   () =>
-  async ({ url, method = 'GET', data, params }) => {
+  async ({ url, method = 'GET', data, params, headers }) => {
     try {
-      const result = await axiosInstance({
+      const config = {
         url,
         method,
         data,
         params,
-      });
+      };
+      
+      // If data is FormData, remove Content-Type to let axios set it automatically
+      if (data instanceof FormData) {
+        config.headers = {
+          ...headers,
+          'Content-Type': undefined, // Let axios set the boundary
+        };
+      } else if (headers) {
+        config.headers = headers;
+      }
+      
+      const result = await axiosInstance(config);
       return { data: result.data };
     } catch (axiosError) {
       const err = axiosError;

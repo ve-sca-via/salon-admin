@@ -11,7 +11,7 @@ import { salonApi } from '../services/api/salonApi';
 import { userApi } from '../services/api/userApi';
 import { appointmentApi } from '../services/api/appointmentApi';
 import { careerApi } from '../services/api/careerApi';
-import { serviceApi } from '../services/api/serviceApi';
+import { serviceCategoryApi } from '../services/api/serviceCategoryApi';
 import { staffApi } from '../services/api/staffApi';
 import { configApi } from '../services/api/configApi';
 
@@ -33,7 +33,7 @@ const persistConfig = {
     userApi.reducerPath,         // 🔴 Contains customer emails/phones
     appointmentApi.reducerPath,  // 🔴 Contains customer booking details
     careerApi.reducerPath,       // 🔴 Contains applicant personal info
-    serviceApi.reducerPath,      // Low risk but unnecessary
+    serviceCategoryApi.reducerPath, // Low risk but unnecessary
     staffApi.reducerPath,        // Contains staff personal info
     salonApi.reducerPath,        // 🔴 Contains salon data - MUST be fresh after mutations
   ],
@@ -50,7 +50,7 @@ const rootReducer = combineReducers({
   [userApi.reducerPath]: userApi.reducer,
   [appointmentApi.reducerPath]: appointmentApi.reducer,
   [careerApi.reducerPath]: careerApi.reducer,
-  [serviceApi.reducerPath]: serviceApi.reducer,
+  [serviceCategoryApi.reducerPath]: serviceCategoryApi.reducer,
   [staffApi.reducerPath]: staffApi.reducer,
   [configApi.reducerPath]: configApi.reducer,
 });
@@ -66,7 +66,10 @@ export const store = configureStore({
         // Ignore these action types (including redux-persist actions)
         ignoredActions: ['auth/setUser', FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER],
         // Ignore these field paths in all actions
-        ignoredActionPaths: ['payload.timestamp'],
+        ignoredActionPaths: [
+          'payload.timestamp',
+          'meta.arg.originalArgs', // Ignore File objects in RTK Query mutations
+        ],
         // Ignore these paths in the state
         ignoredPaths: ['auth.user'],
       },
@@ -76,7 +79,7 @@ export const store = configureStore({
       .concat(userApi.middleware)
       .concat(appointmentApi.middleware)
       .concat(careerApi.middleware)
-      .concat(serviceApi.middleware)
+      .concat(serviceCategoryApi.middleware)
       .concat(staffApi.middleware)
       .concat(configApi.middleware),
 });
