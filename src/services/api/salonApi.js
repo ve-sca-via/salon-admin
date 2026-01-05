@@ -26,9 +26,7 @@ export const salonApi = createApi({
               { type: 'Salons', id: 'LIST' },
             ]
           : [{ type: 'Salons', id: 'LIST' }],
-      keepUnusedDataFor: 60, // Cache for 1 minute only (was 5 min)
-      refetchOnMountOrArgChange: true, // ALWAYS refetch on mount or when invalidated
-      refetchOnFocus: true, // Refetch when tab regains focus
+      keepUnusedDataFor: 300, // Cache for 5 minutes
       refetchOnReconnect: true, // Refetch on network reconnection
     }),
 
@@ -40,11 +38,8 @@ export const salonApi = createApi({
         params: { status_filter: 'pending', limit, offset },
       }),
       providesTags: ['PendingSalons'],
-      keepUnusedDataFor: 60, // Cache for 1 minute (was 3 min)
-      refetchOnFocus: true, // Refetch on focus for latest data
+      keepUnusedDataFor: 300, // Cache for 5 minutes
       refetchOnReconnect: true,
-      refetchOnMountOrArgChange: true, // ALWAYS refetch when needed
-      pollingInterval: 30000, // Poll every 30 seconds (reduced from 60s)
     }),
 
     // Get single salon details

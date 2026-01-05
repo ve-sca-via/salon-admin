@@ -124,14 +124,6 @@ export const SystemConfig = () => {
     return acc;
   }, {});
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <LoadingSpinner size="lg" />
-      </div>
-    );
-  }
-
   // Show error state if API call failed
   if (error) {
     return (

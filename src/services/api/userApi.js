@@ -26,9 +26,7 @@ export const userApi = createApi({
               { type: 'Users', id: 'LIST' },
             ]
           : [{ type: 'Users', id: 'LIST' }],
-      keepUnusedDataFor: 60, // Cache for 1 minute only (was 10 min)
-      refetchOnMountOrArgChange: true, // ALWAYS refetch when needed
-      refetchOnFocus: true, // Refetch when tab regains focus
+      keepUnusedDataFor: 300, // Cache for 5 minutes
       refetchOnReconnect: true, // Refetch on reconnection
     }),
 

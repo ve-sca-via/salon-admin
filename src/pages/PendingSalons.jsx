@@ -233,15 +233,9 @@ export const PendingSalons = () => {
     },
   ];
 
-  // Only show full-page loader on INITIAL load (no cached data)
-  // If we have cached data, show it while refetching in background
-  if (isLoading && !pendingData) {
-    return <LoadingSpinner size="xl" className="min-h-screen" />;
-  }
-
   return (
     <div className="space-y-6">
-      {/* Background refresh indicator */}
+      {/* Background refresh indicator - shows mini spinner while refreshing cached data */}
       {isFetching && pendingData && (
         <div className="fixed top-16 right-4 z-50 bg-blue-500 text-white px-4 py-2 rounded-lg shadow-lg flex items-center space-x-2 animate-pulse">
           <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">

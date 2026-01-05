@@ -26,11 +26,8 @@ export const appointmentApi = createApi({
               { type: 'Appointments', id: 'LIST' },
             ]
           : [{ type: 'Appointments', id: 'LIST' }],
-      keepUnusedDataFor: 60, // Cache for 1 minute (was 2 min)
-      refetchOnFocus: true, // Refetch on focus (was false)
+      keepUnusedDataFor: 300, // Cache for 5 minutes
       refetchOnReconnect: true,
-      refetchOnMountOrArgChange: true, // ALWAYS refetch when needed
-      pollingInterval: 60000, // Poll every 1 minute (was 2 min)
     }),
 
     // Get single appointment

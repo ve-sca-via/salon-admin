@@ -26,9 +26,7 @@ export const serviceCategoryApi = createApi({
               { type: 'ServiceCategories', id: 'LIST' },
             ]
           : [{ type: 'ServiceCategories', id: 'LIST' }],
-      keepUnusedDataFor: 120,
-      refetchOnMountOrArgChange: true,
-      refetchOnFocus: true,
+      keepUnusedDataFor: 300, // Cache for 5 minutes
       refetchOnReconnect: true,
     }),
 

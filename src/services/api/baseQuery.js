@@ -200,9 +200,18 @@ const axiosBaseQuery =
       return { data: result.data };
     } catch (axiosError) {
       const err = axiosError;
+      
+      // Preserve status code for proper error handling in components
+      let status = err.response?.status;
+      
+      // Handle network errors (no response)
+      if (!err.response) {
+        status = 'FETCH_ERROR';
+      }
+      
       return {
         error: {
-          status: err.response?.status,
+          status: status,
           data: err.response?.data || err.message,
         },
       };
