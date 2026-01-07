@@ -2,7 +2,7 @@ import { Navigate, Outlet } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { PageLoader } from '../common/LoadingSpinner';
 import { useEffect } from 'react';
-import { getCurrentUser } from '../../services/backendApi';
+import { getCurrentUser } from '../../services/api/authApi';
 import { useDispatch } from 'react-redux';
 import { setUser, setError } from '../../store/slices/authSlice';
 
@@ -19,9 +19,11 @@ export const ProtectedRoute = () => {
           dispatch(setUser(response.user));
         })
         .catch(error => {
-          console.error('Failed to get user:', error);
           dispatch(setError(error.message));
-          localStorage.clear();
+          // Only clear auth-related items, not all localStorage
+          localStorage.removeItem('access_token');
+          localStorage.removeItem('refresh_token');
+          localStorage.removeItem('user');
         });
     }
   }, [user, dispatch]);
@@ -30,6 +32,7 @@ export const ProtectedRoute = () => {
     return <PageLoader />;
   }
 
+  // Check token first, then fallback to isAuthenticated
   const token = localStorage.getItem('access_token');
   if (!token && !isAuthenticated) {
     return <Navigate to="/login" replace />;

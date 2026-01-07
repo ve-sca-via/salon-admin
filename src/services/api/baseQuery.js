@@ -9,9 +9,6 @@ const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
 
 const axiosInstance = axios.create({
   baseURL: BACKEND_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
   timeout: 30000, // 30 seconds
 });
 
@@ -49,7 +46,7 @@ const refreshAccessToken = async () => {
 
   try {
     // Use fetch for refresh to avoid interceptor recursion
-    const response = await fetch(`${BACKEND_URL}/api/auth/refresh`, {
+    const response = await fetch(`${BACKEND_URL}/api/v1/auth/refresh`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ refresh_token }),
@@ -162,7 +159,9 @@ axiosInstance.interceptors.response.use(
           localStorage.removeItem('access_token');
           localStorage.removeItem('refresh_token');
           localStorage.removeItem('user');
-          window.location.href = '/login';
+          
+          // Dispatch logout event for React app to handle
+          window.dispatchEvent(new CustomEvent('auth:logout', { detail: 'Session expired' }));
           
           reject(err);
         })
@@ -178,20 +177,41 @@ axiosInstance.interceptors.response.use(
  */
 const axiosBaseQuery =
   () =>
-  async ({ url, method = 'GET', data, params }) => {
+  async ({ url, method = 'GET', data, params, headers }) => {
     try {
-      const result = await axiosInstance({
+      const config = {
         url,
         method,
         data,
         params,
-      });
+      };
+      
+      // If data is FormData, remove Content-Type to let axios set it automatically
+      if (data instanceof FormData) {
+        config.headers = {
+          ...headers,
+          'Content-Type': undefined, // Let axios set the boundary
+        };
+      } else if (headers) {
+        config.headers = headers;
+      }
+      
+      const result = await axiosInstance(config);
       return { data: result.data };
     } catch (axiosError) {
       const err = axiosError;
+      
+      // Preserve status code for proper error handling in components
+      let status = err.response?.status;
+      
+      // Handle network errors (no response)
+      if (!err.response) {
+        status = 'FETCH_ERROR';
+      }
+      
       return {
         error: {
-          status: err.response?.status,
+          status: status,
           data: err.response?.data || err.message,
         },
       };

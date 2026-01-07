@@ -20,7 +20,9 @@ export const careerApi = createApi({
           method: 'GET'
         };
       },
-      providesTags: ['CareerApplications']
+      providesTags: ['CareerApplications'],
+      keepUnusedDataFor: 300, // Cache for 5 minutes
+      refetchOnReconnect: true,
     }),
 
     // Get single application

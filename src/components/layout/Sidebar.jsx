@@ -1,27 +1,31 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { supabase } from '../../config/supabase';
-import { getPendingVendorRequests } from '../../services/backendApi';
+import { 
+  useGetPendingSalonsQuery,
+  salonApi 
+} from '../../services/api/salonApi';
+import { adminApi } from '../../services/api/adminApi';
+import { userApi } from '../../services/api/userApi';
+import { appointmentApi } from '../../services/api/appointmentApi';
+import { careerApi } from '../../services/api/careerApi';
+import { serviceCategoryApi } from '../../services/api/serviceCategoryApi';
+import { configApi } from '../../services/api/configApi';
+import { useDispatch } from 'react-redux';
 
 export const Sidebar = () => {
   const location = useLocation();
-  const [pendingCount, setPendingCount] = useState(0);
+  const dispatch = useDispatch();
+  
+  // Use RTK Query to fetch pending salons
+  const { data: pendingSalonsData } = useGetPendingSalonsQuery({ limit: 100 });
+  const pendingCount = pendingSalonsData?.data?.length || 0;
+  
   const [hasNewNotification, setHasNewNotification] = useState(false);
 
   const isActive = (path) => location.pathname === path;
 
   useEffect(() => {
-    const fetchPendingCount = async () => {
-      try {
-        const data = await getPendingVendorRequests();
-        setPendingCount(data?.length || 0);
-      } catch (error) {
-        console.error('Error fetching pending count:', error);
-      }
-    };
-
-    fetchPendingCount();
-    
     // Subscribe to real-time changes
     const channel = supabase
       .channel('sidebar-notifications')
@@ -34,8 +38,6 @@ export const Sidebar = () => {
           filter: 'status=eq.pending',
         },
         (payload) => {
-          console.log('Sidebar: New submission detected', payload);
-          setPendingCount((prev) => prev + 1);
           setHasNewNotification(true);
           
           // Remove animation after 3 seconds
@@ -49,15 +51,8 @@ export const Sidebar = () => {
           schema: 'public',
           table: 'vendor_join_requests',
         },
-        (payload) => {
-          // If status changed from pending to something else, decrease count
-          if (payload.old?.status === 'pending' && payload.new?.status !== 'pending') {
-            setPendingCount((prev) => Math.max(0, prev - 1));
-          }
-          // If status changed to pending from something else, increase count
-          else if (payload.old?.status !== 'pending' && payload.new?.status === 'pending') {
-            setPendingCount((prev) => prev + 1);
-          }
+        () => {
+          // RTK Query will automatically refetch when cache is invalidated
         }
       )
       .subscribe();
@@ -66,6 +61,42 @@ export const Sidebar = () => {
       supabase.removeChannel(channel);
     };
   }, []);
+
+  // Prefetch handlers for instant navigation
+  const handlePrefetch = (path) => {
+    // Prefetch data based on the route
+    switch (path) {
+      case '/':
+        dispatch(adminApi.util.prefetch('getDashboardStats', undefined, { force: false }));
+        break;
+      case '/pending-salons':
+        dispatch(salonApi.util.prefetch('getPendingSalons', {}, { force: false }));
+        break;
+      case '/salons':
+        dispatch(salonApi.util.prefetch('getAllSalons', {}, { force: false }));
+        break;
+      case '/users':
+        dispatch(userApi.util.prefetch('getAllUsers', {}, { force: false }));
+        break;
+      case '/appointments':
+        dispatch(appointmentApi.util.prefetch('getAllAppointments', {}, { force: false }));
+        break;
+      case '/career-applications':
+        dispatch(careerApi.util.prefetch('getCareerApplications', {}, { force: false }));
+        break;
+      case '/services':
+        dispatch(serviceCategoryApi.util.prefetch('getAllServiceCategories', {}, { force: false }));
+        break;
+      case '/rm-management':
+        dispatch(userApi.util.prefetch('getAllRMs', {}, { force: false }));
+        break;
+      case '/system-config':
+        dispatch(configApi.util.prefetch('getSystemConfigs', undefined, { force: false }));
+        break;
+      default:
+        break;
+    }
+  };
 
   const menuItems = [
     {
@@ -105,6 +136,15 @@ export const Sidebar = () => {
         </svg>
       ),
       label: 'Users',
+    },
+    {
+      path: '/rm-management',
+      icon: (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+        </svg>
+      ),
+      label: 'RM Management',
     },
     {
       path: '/appointments',
@@ -149,7 +189,7 @@ export const Sidebar = () => {
     <div className="flex flex-col w-64 bg-white h-screen border-r border-gray-200 shadow-sm">
       {/* Logo */}
       <div className="flex items-center justify-center h-16 border-b border-gray-200 bg-gradient-to-r from-orange-500 to-orange-600">
-        <h1 className="text-xl font-display font-bold text-white">SalonHub</h1>
+        <h1 className="text-xl font-display font-bold text-white">Lubist</h1>
       </div>
 
       {/* Navigation */}
@@ -158,6 +198,8 @@ export const Sidebar = () => {
           <Link
             key={item.path}
             to={item.path}
+            onMouseEnter={() => handlePrefetch(item.path)}
+            onFocus={() => handlePrefetch(item.path)}
             className={`flex items-center justify-between px-4 py-3 text-sm font-medium rounded-lg transition-all ${
               isActive(item.path)
                 ? 'bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-md'
@@ -188,7 +230,7 @@ export const Sidebar = () => {
       {/* Footer */}
       <div className="p-4 border-t border-gray-200">
         <div className="text-xs text-gray-500 text-center font-body">
-          © 2024 SalonHub Admin
+          © 2025 Lubist Admin
         </div>
       </div>
     </div>

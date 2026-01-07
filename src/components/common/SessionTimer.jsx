@@ -46,7 +46,6 @@ const SessionTimer = () => {
       setShowWarning(false);
       toast.success('Session refreshed successfully!');
     } catch (error) {
-      console.error('Failed to refresh session:', error);
       toast.error('Session refresh failed. Please login again.');
       
       // Logout and redirect

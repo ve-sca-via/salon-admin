@@ -5,10 +5,7 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 const supabaseServiceRoleKey = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY;
 
 if (!supabaseUrl || !supabaseAnonKey) {
-  console.error('Missing Supabase environment variables. Please create a .env file with:');
-  console.error('VITE_SUPABASE_URL=your_supabase_url');
-  console.error('VITE_SUPABASE_ANON_KEY=your_anon_key');
-  console.error('VITE_SUPABASE_SERVICE_ROLE_KEY=your_service_role_key');
+  throw new Error('Missing Supabase environment variables. Please check your .env file.');
 }
 
 // Regular client for authentication (use dummy values if env vars missing for dev)
@@ -65,14 +62,11 @@ export const isAdminUser = async (userId) => {
       .single();
     
     if (error) {
-      console.error('Error checking admin status:', error);
       return false;
     }
     
-    console.log('User role check:', { userId, role: data?.role });
     return data?.role === 'admin' || data?.role === 'super_admin';
   } catch (error) {
-    console.error('Error checking admin status:', error);
     return false;
   }
 };

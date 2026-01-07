@@ -1,10 +1,8 @@
+import { SkeletonTable } from './Skeleton';
+
 export const Table = ({ columns, data, isLoading, pagination, onPageChange }) => {
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    );
+    return <SkeletonTable rows={5} columns={columns?.length || 4} />;
   }
 
   if (!data || data.length === 0) {

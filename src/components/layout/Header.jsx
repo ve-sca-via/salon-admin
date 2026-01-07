@@ -1,16 +1,23 @@
 import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect, useRef } from 'react';
-import { supabase } from '../../config/supabase';
+import { supabase } from '../../config/supabase'; // Still needed for real-time notifications
 import { logout as logoutAction } from '../../store/slices/authSlice';
 import { toast } from 'react-toastify';
-import { getPendingVendorRequests, logout as apiLogout } from '../../services/backendApi';
+import { useGetPendingSalonsQuery, salonApi } from '../../services/api/salonApi';
+import { logout as apiLogout } from '../../services/api/authApi';
+import { configApi } from '../../services/api/configApi';
+import { persistor } from '../../store/store';
 
 export const Header = () => {
   const { user } = useSelector((state) => state.auth);
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const [pendingCount, setPendingCount] = useState(0);
+  
+  // Use RTK Query to fetch pending salons
+  const { data: pendingSalonsData } = useGetPendingSalonsQuery({ limit: 100 });
+  const pendingCount = pendingSalonsData?.data?.length || 0;
+  
   const [hasNewNotification, setHasNewNotification] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const menuRef = useRef(null);
@@ -27,20 +34,8 @@ export const Header = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Fetch initial pending count
-  const fetchPendingCount = async () => {
-    try {
-      const data = await getPendingVendorRequests();
-      setPendingCount(data?.length || 0);
-    } catch (error) {
-      console.error('Error fetching pending count:', error);
-    }
-  };
-
+  // Subscribe to real-time changes for notifications
   useEffect(() => {
-    fetchPendingCount();
-
-    // Subscribe to real-time changes for notifications
     const channel = supabase
       .channel('header-notifications')
       .on(
@@ -53,7 +48,6 @@ export const Header = () => {
         },
         (payload) => {
           // Update count and show animation
-          setPendingCount((prev) => prev + 1);
           setHasNewNotification(true);
           
           // Show toast
@@ -73,15 +67,8 @@ export const Header = () => {
           schema: 'public',
           table: 'vendor_join_requests',
         },
-        (payload) => {
-          // If status changed from pending to something else, decrease count
-          if (payload.old?.status === 'pending' && payload.new?.status !== 'pending') {
-            setPendingCount((prev) => Math.max(0, prev - 1));
-          }
-          // If status changed to pending from something else, increase count
-          else if (payload.old?.status !== 'pending' && payload.new?.status === 'pending') {
-            setPendingCount((prev) => prev + 1);
-          }
+        () => {
+          // RTK Query will automatically refetch when cache is invalidated
         }
       )
       .subscribe();
@@ -97,20 +84,26 @@ export const Header = () => {
       // Call backend logout endpoint to revoke token
       await apiLogout();
       
-      // Also sign out from Supabase
-      await supabase.auth.signOut();
-      
       // Clear Redux state
       dispatch(logoutAction());
+      
+      // Purge persisted cache (security: clear all cached data)
+      await persistor.purge();
       
       toast.success('Logged out successfully');
       navigate('/login');
     } catch (error) {
       toast.error('Error logging out');
-      console.error('Logout error:', error);
       
       // Still clear local state even if API call fails
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('refresh_token');
+      localStorage.removeItem('user');
       dispatch(logoutAction());
+      
+      // Purge cache even on error
+      await persistor.purge();
+      
       navigate('/login');
     }
   };
@@ -118,6 +111,16 @@ export const Header = () => {
   const handleNotificationClick = () => {
     setHasNewNotification(false);
     navigate('/pending-salons');
+  };
+
+  // Prefetch pending salons data on hover
+  const handleNotificationHover = () => {
+    dispatch(salonApi.util.prefetch('getPendingSalons', {}, { force: false }));
+  };
+
+  // Prefetch system config on hover
+  const handleSettingsHover = () => {
+    dispatch(configApi.util.prefetch('getSystemConfigs', undefined, { force: false }));
   };
 
   const toggleUserMenu = (e) => {
@@ -136,6 +139,8 @@ export const Header = () => {
           {/* Notifications */}
           <button 
             onClick={handleNotificationClick}
+            onMouseEnter={handleNotificationHover}
+            onFocus={handleNotificationHover}
             className={`relative p-2 text-gray-600 hover:text-accent-orange hover:bg-orange-50 rounded-lg transition-all ${
               hasNewNotification ? 'animate-bounce' : ''
             }`}
@@ -165,12 +170,12 @@ export const Header = () => {
             >
               <div className="text-right">
                 <p className="text-sm font-medium text-gray-900">
-                  {user?.user_metadata?.full_name || user?.email}
+                  {user?.full_name || user?.email}
                 </p>
                 <p className="text-xs text-gray-500">Administrator</p>
               </div>
               <div className="flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-r from-orange-500 to-orange-600 text-white font-semibold shadow-md">
-                {user?.user_metadata?.full_name?.[0]?.toUpperCase() || 'A'}
+                {user?.full_name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || 'A'}
               </div>
               <svg 
                 className={`w-4 h-4 text-gray-400 transition-transform ${showUserMenu ? 'rotate-180' : ''}`} 
@@ -187,7 +192,7 @@ export const Header = () => {
               <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-50">
                 <div className="px-4 py-3 border-b border-gray-100">
                   <p className="text-sm font-medium text-gray-900">
-                    {user?.user_metadata?.full_name || 'Admin User'}
+                    {user?.full_name || 'Admin User'}
                   </p>
                   <p className="text-xs text-gray-500 truncate">{user?.email}</p>
                 </div>
@@ -210,6 +215,8 @@ export const Header = () => {
                     setShowUserMenu(false);
                     navigate('/system-config');
                   }}
+                  onMouseEnter={handleSettingsHover}
+                  onFocus={handleSettingsHover}
                   className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-2"
                 >
                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">

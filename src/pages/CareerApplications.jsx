@@ -5,7 +5,7 @@ import {
   useLazyGetDocumentDownloadUrlQuery 
 } from '../services/api/careerApi';
 import { Card } from '../components/common/Card';
-import { LoadingSpinner } from '../components/common/LoadingSpinner';
+import { SkeletonCard } from '../components/common/Skeleton';
 import { Modal } from '../components/common/Modal';
 import { Button } from '../components/common/Button';
 import { toast } from 'react-toastify';
@@ -79,10 +79,6 @@ export const CareerApplications = () => {
     });
   };
 
-  if (isLoading) {
-    return <LoadingSpinner size="xl" className="min-h-screen" />;
-  }
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -124,28 +120,42 @@ export const CareerApplications = () => {
 
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <div className="text-sm text-gray-600">Total Applications</div>
-          <div className="text-2xl font-bold text-gray-900">{applications.length}</div>
-        </Card>
-        <Card>
-          <div className="text-sm text-gray-600">Pending</div>
-          <div className="text-2xl font-bold text-yellow-600">
-            {applications.filter(a => a.status === 'pending').length}
-          </div>
-        </Card>
-        <Card>
-          <div className="text-sm text-gray-600">Shortlisted</div>
-          <div className="text-2xl font-bold text-green-600">
-            {applications.filter(a => a.status === 'shortlisted').length}
-          </div>
-        </Card>
-        <Card>
-          <div className="text-sm text-gray-600">Hired</div>
-          <div className="text-2xl font-bold text-emerald-600">
-            {applications.filter(a => a.status === 'hired').length}
-          </div>
-        </Card>
+        {isLoading ? (
+          // Skeleton stat cards
+          Array.from({ length: 4 }).map((_, i) => (
+            <Card key={i}>
+              <div className="animate-pulse space-y-2">
+                <div className="h-4 bg-gray-200 rounded w-24"></div>
+                <div className="h-8 bg-gray-200 rounded w-12"></div>
+              </div>
+            </Card>
+          ))
+        ) : (
+          <>
+            <Card>
+              <div className="text-sm text-gray-600">Total Applications</div>
+              <div className="text-2xl font-bold text-gray-900">{applications.length}</div>
+            </Card>
+            <Card>
+              <div className="text-sm text-gray-600">Pending</div>
+              <div className="text-2xl font-bold text-yellow-600">
+                {applications.filter(a => a.status === 'pending').length}
+              </div>
+            </Card>
+            <Card>
+              <div className="text-sm text-gray-600">Shortlisted</div>
+              <div className="text-2xl font-bold text-green-600">
+                {applications.filter(a => a.status === 'shortlisted').length}
+              </div>
+            </Card>
+            <Card>
+              <div className="text-sm text-gray-600">Hired</div>
+              <div className="text-2xl font-bold text-emerald-600">
+                {applications.filter(a => a.status === 'hired').length}
+              </div>
+            </Card>
+          </>
+        )}
       </div>
 
       {/* Applications Table */}
@@ -175,7 +185,44 @@ export const CareerApplications = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {applications.length === 0 ? (
+              {isLoading ? (
+                // Skeleton loading rows
+                Array.from({ length: 5 }).map((_, i) => (
+                  <tr key={i}>
+                    <td className="px-6 py-4">
+                      <div className="animate-pulse space-y-2">
+                        <div className="h-4 bg-gray-200 rounded w-32"></div>
+                        <div className="h-3 bg-gray-200 rounded w-40"></div>
+                        <div className="h-3 bg-gray-200 rounded w-28"></div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="animate-pulse space-y-2">
+                        <div className="h-4 bg-gray-200 rounded w-24"></div>
+                        <div className="h-3 bg-gray-200 rounded w-20"></div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="animate-pulse space-y-2">
+                        <div className="h-4 bg-gray-200 rounded w-16"></div>
+                        <div className="h-3 bg-gray-200 rounded w-24"></div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="animate-pulse h-3 bg-gray-200 rounded w-28"></div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="animate-pulse h-6 bg-gray-200 rounded-full w-20"></div>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <div className="animate-pulse flex justify-end gap-2">
+                        <div className="h-4 bg-gray-200 rounded w-10"></div>
+                        <div className="h-4 bg-gray-200 rounded w-12"></div>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              ) : applications.length === 0 ? (
                 <tr>
                   <td colSpan="6" className="px-6 py-12 text-center text-gray-500">
                     No applications found

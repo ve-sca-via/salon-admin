@@ -1,10 +1,9 @@
 import { configureStore } from '@reduxjs/toolkit';
+import { setupListeners } from '@reduxjs/toolkit/query';
+import { persistStore, persistReducer, FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER } from 'redux-persist';
+import storage from 'redux-persist/lib/storage'; // localStorage
+import { combineReducers } from '@reduxjs/toolkit';
 import authReducer from './slices/authSlice';
-import usersReducer from './slices/usersSlice';
-import appointmentsReducer from './slices/appointmentsSlice';
-import salonsReducer from './slices/salonsSlice';
-import staffReducer from './slices/staffSlice';
-import dashboardReducer from './slices/dashboardSlice';
 
 // RTK Query APIs
 import { adminApi } from '../services/api/adminApi';
@@ -12,29 +11,65 @@ import { salonApi } from '../services/api/salonApi';
 import { userApi } from '../services/api/userApi';
 import { appointmentApi } from '../services/api/appointmentApi';
 import { careerApi } from '../services/api/careerApi';
+import { serviceCategoryApi } from '../services/api/serviceCategoryApi';
+import { staffApi } from '../services/api/staffApi';
+import { configApi } from '../services/api/configApi';
+
+// Redux Persist Configuration
+const persistConfig = {
+  key: 'salon-admin-root',
+  version: 1,
+  storage,
+  // Only persist non-sensitive data
+  // DO NOT persist caches containing PII (personal identifiable information)
+  whitelist: [
+    'auth',                // ✅ Auth state (just user role/name, no token)
+    configApi.reducerPath, // ✅ System config (non-sensitive settings)
+    // salonApi.reducerPath REMOVED - was causing stale data on refresh
+  ],
+  // DO NOT PERSIST (contains PII or needs to be fresh):
+  blacklist: [
+    adminApi.reducerPath,        // Needs to be fresh (dashboard stats)
+    userApi.reducerPath,         // 🔴 Contains customer emails/phones
+    appointmentApi.reducerPath,  // 🔴 Contains customer booking details
+    careerApi.reducerPath,       // 🔴 Contains applicant personal info
+    serviceCategoryApi.reducerPath, // Low risk but unnecessary
+    staffApi.reducerPath,        // Contains staff personal info
+    salonApi.reducerPath,        // 🔴 Contains salon data - MUST be fresh after mutations
+  ],
+  // Throttle writes to localStorage (better performance)
+  throttle: 1000,
+};
+
+// Combine all reducers
+const rootReducer = combineReducers({
+  auth: authReducer,
+  // RTK Query reducers
+  [adminApi.reducerPath]: adminApi.reducer,
+  [salonApi.reducerPath]: salonApi.reducer,
+  [userApi.reducerPath]: userApi.reducer,
+  [appointmentApi.reducerPath]: appointmentApi.reducer,
+  [careerApi.reducerPath]: careerApi.reducer,
+  [serviceCategoryApi.reducerPath]: serviceCategoryApi.reducer,
+  [staffApi.reducerPath]: staffApi.reducer,
+  [configApi.reducerPath]: configApi.reducer,
+});
+
+// Wrap with persistReducer
+const persistedReducer = persistReducer(persistConfig, rootReducer);
 
 export const store = configureStore({
-  reducer: {
-    auth: authReducer,
-    users: usersReducer,
-    appointments: appointmentsReducer,
-    salons: salonsReducer,
-    staff: staffReducer,
-    dashboard: dashboardReducer,
-    // RTK Query reducers
-    [adminApi.reducerPath]: adminApi.reducer,
-    [salonApi.reducerPath]: salonApi.reducer,
-    [userApi.reducerPath]: userApi.reducer,
-    [appointmentApi.reducerPath]: appointmentApi.reducer,
-    [careerApi.reducerPath]: careerApi.reducer,
-  },
+  reducer: persistedReducer,
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
       serializableCheck: {
-        // Ignore these action types
-        ignoredActions: ['auth/setUser'],
+        // Ignore these action types (including redux-persist actions)
+        ignoredActions: ['auth/setUser', FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER],
         // Ignore these field paths in all actions
-        ignoredActionPaths: ['payload.timestamp'],
+        ignoredActionPaths: [
+          'payload.timestamp',
+          'meta.arg.originalArgs', // Ignore File objects in RTK Query mutations
+        ],
         // Ignore these paths in the state
         ignoredPaths: ['auth.user'],
       },
@@ -43,5 +78,22 @@ export const store = configureStore({
       .concat(salonApi.middleware)
       .concat(userApi.middleware)
       .concat(appointmentApi.middleware)
-      .concat(careerApi.middleware),
+      .concat(careerApi.middleware)
+      .concat(serviceCategoryApi.middleware)
+      .concat(staffApi.middleware)
+      .concat(configApi.middleware),
 });
+
+// Enable refetchOnFocus/refetchOnReconnect behaviors
+setupListeners(store.dispatch);
+
+// Create persistor
+export const persistor = persistStore(store);
+
+// Expose store in development for debugging
+if (import.meta.env.DEV) {
+  window.store = store;
+  window.persistor = persistor;
+}
+
+export default store;

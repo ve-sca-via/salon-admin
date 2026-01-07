@@ -1,35 +1,33 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { toast } from 'react-toastify';
 import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
 import { LoadingSpinner } from '../components/common/LoadingSpinner';
-import { getSystemConfigs, updateSystemConfig, createSystemConfig, deleteSystemConfig } from '../services/backendApi';
+import { Modal } from '../components/common/Modal';
+import { useGetSystemConfigsQuery, useUpdateSystemConfigMutation, useCreateSystemConfigMutation, useDeleteSystemConfigMutation } from '../services/api/configApi';
 
 export const SystemConfig = () => {
-  const [configs, setConfigs] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { data: configsData, isLoading, error } = useGetSystemConfigsQuery();
+  const [updateConfig] = useUpdateSystemConfigMutation();
+  const [createConfig] = useCreateSystemConfigMutation();
+  const [deleteConfig] = useDeleteSystemConfigMutation();
+
+  // Backend returns array directly, wrapped by axiosBaseQuery in { data: [...] }
+  // So configsData is already the array
+  const configs = Array.isArray(configsData) ? configsData : (configsData?.data || []);
   const [editingId, setEditingId] = useState(null);
   const [editValue, setEditValue] = useState('');
   const [saving, setSaving] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
-
-  const fetchConfigs = async () => {
-    try {
-      setIsLoading(true);
-      const data = await getSystemConfigs();
-      // Filter out sensitive configs from display (but admin can see them)
-      setConfigs(data);
-    } catch (error) {
-      console.error('Error fetching configs:', error);
-      toast.error('Failed to load system configurations');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchConfigs();
-  }, []);
+  
+  // Create modal form state
+  const [newConfig, setNewConfig] = useState({
+    config_key: '',
+    config_value: '',
+    config_type: 'string',
+    description: '',
+    is_active: true
+  });
 
   const handleEdit = (config) => {
     setEditingId(config.id);
@@ -44,12 +42,10 @@ export const SystemConfig = () => {
   const handleSave = async (configKey) => {
     try {
       setSaving(true);
-      await updateSystemConfig(configKey, { config_value: editValue });
+      await updateConfig({ configKey, data: { config_value: editValue } }).unwrap();
       toast.success('Configuration updated successfully');
       setEditingId(null);
-      fetchConfigs();
     } catch (error) {
-      console.error('Error updating config:', error);
       toast.error(error.message || 'Failed to update configuration');
     } finally {
       setSaving(false);
@@ -62,13 +58,51 @@ export const SystemConfig = () => {
     }
 
     try {
-      await deleteSystemConfig(configKey);
+      await deleteConfig(configKey).unwrap();
       toast.success('Configuration deleted successfully');
-      fetchConfigs();
     } catch (error) {
-      console.error('Error deleting config:', error);
       toast.error(error.message || 'Failed to delete configuration');
     }
+  };
+
+  const handleCreate = async (e) => {
+    e.preventDefault();
+    
+    // Validate required fields
+    if (!newConfig.config_key || !newConfig.config_value) {
+      toast.error('Config key and value are required');
+      return;
+    }
+
+    try {
+      setSaving(true);
+      await createConfig(newConfig).unwrap();
+      toast.success('Configuration created successfully');
+      setShowCreateModal(false);
+      // Reset form
+      setNewConfig({
+        config_key: '',
+        config_value: '',
+        config_type: 'string',
+        description: '',
+        is_active: true
+      });
+    } catch (error) {
+      toast.error(error?.data?.detail || error.message || 'Failed to create configuration');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleCloseModal = () => {
+    setShowCreateModal(false);
+    setNewConfig({
+      config_key: '',
+      config_value: '',
+      config_type: 'string',
+      description: '',
+      is_active: true
+    });
   };
 
   const getConfigCategory = (key) => {
@@ -90,10 +124,72 @@ export const SystemConfig = () => {
     return acc;
   }, {});
 
-  if (isLoading) {
+  // Show error state if API call failed
+  if (error) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <LoadingSpinner size="lg" />
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">System Configuration</h1>
+          <p className="text-gray-600 mt-1">
+            Manage fees, limits, and platform settings
+          </p>
+        </div>
+
+        <Card>
+          <div className="p-12 text-center">
+            <svg className="w-16 h-16 mx-auto text-red-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Failed to Load Configurations</h3>
+            <p className="text-gray-600 mb-4">
+              Error: {error?.data?.detail || error?.message || 'Unknown error'}
+            </p>
+            <p className="text-sm text-gray-500 mb-6">
+              Status: {error?.status || 'N/A'}
+            </p>
+            <Button onClick={() => window.location.reload()}>
+              Retry
+            </Button>
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
+  // Show empty state if no configs
+  if (configs.length === 0) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">System Configuration</h1>
+            <p className="text-gray-600 mt-1">
+              Manage fees, limits, and platform settings
+            </p>
+          </div>
+          <Button onClick={() => setShowCreateModal(true)}>
+            + Add New Config
+          </Button>
+        </div>
+
+        <Card>
+          <div className="p-12 text-center">
+            <svg className="w-16 h-16 mx-auto text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No System Configurations</h3>
+            <p className="text-gray-600 mb-4">
+              The system_config table is empty. Add your first configuration to get started.
+            </p>
+            <p className="text-sm text-gray-500 mb-6">
+              Example configurations: platform_fee, rm_commission, booking_limit, etc.
+            </p>
+            <Button onClick={() => setShowCreateModal(true)}>
+              + Add First Config
+            </Button>
+          </div>
+        </Card>
       </div>
     );
   }
@@ -256,6 +352,105 @@ export const SystemConfig = () => {
           </ul>
         </div>
       </Card>
+
+      {/* Create Config Modal */}
+      <Modal
+        isOpen={showCreateModal}
+        onClose={handleCloseModal}
+        title="Create New Configuration"
+        size="md"
+      >
+        <form onSubmit={handleCreate} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Config Key <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              value={newConfig.config_key}
+              onChange={(e) => setNewConfig({ ...newConfig, config_key: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="e.g., platform_fee, max_bookings"
+              required
+            />
+            <p className="text-xs text-gray-500 mt-1">Use lowercase with underscores (snake_case)</p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Config Value <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              value={newConfig.config_value}
+              onChange={(e) => setNewConfig({ ...newConfig, config_value: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="Enter configuration value"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Config Type
+            </label>
+            <select
+              value={newConfig.config_type}
+              onChange={(e) => setNewConfig({ ...newConfig, config_type: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="string">String</option>
+              <option value="number">Number</option>
+              <option value="boolean">Boolean</option>
+              <option value="json">JSON</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Description
+            </label>
+            <textarea
+              value={newConfig.description}
+              onChange={(e) => setNewConfig({ ...newConfig, description: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="Describe what this configuration does"
+              rows={3}
+            />
+          </div>
+
+          <div className="flex items-center">
+            <input
+              type="checkbox"
+              id="is_active"
+              checked={newConfig.is_active}
+              onChange={(e) => setNewConfig({ ...newConfig, is_active: e.target.checked })}
+              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+            />
+            <label htmlFor="is_active" className="ml-2 text-sm text-gray-700">
+              Active
+            </label>
+          </div>
+
+          <div className="flex justify-end gap-3 pt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleCloseModal}
+              disabled={saving}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              variant="primary"
+              disabled={saving}
+            >
+              {saving ? 'Creating...' : 'Create Configuration'}
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 };
