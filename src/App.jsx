@@ -19,7 +19,6 @@ const Dashboard = lazy(() => import('./pages/Dashboard').then(module => ({ defau
 const Users = lazy(() => import('./pages/Users').then(module => ({ default: module.Users })));
 const Appointments = lazy(() => import('./pages/Appointments').then(module => ({ default: module.Appointments })));
 const Salons = lazy(() => import('./pages/Salons'));
-const Staff = lazy(() => import('./pages/Staff').then(module => ({ default: module.Staff })));
 const Services = lazy(() => import('./pages/Services').then(module => ({ default: module.Services })));
 const PendingSalons = lazy(() => import('./pages/PendingSalons'));
 const RMManagement = lazy(() => import('./pages/RMManagement').then(module => ({ default: module.RMManagement })));
@@ -161,11 +160,6 @@ function AppContent() {
                 <Route path="/pending-salons" element={
                   <ErrorBoundary fallback="page">
                     <PendingSalons />
-                  </ErrorBoundary>
-                } />
-                <Route path="/staff" element={
-                  <ErrorBoundary fallback="page">
-                    <Staff />
                   </ErrorBoundary>
                 } />
                 <Route path="/services" element={

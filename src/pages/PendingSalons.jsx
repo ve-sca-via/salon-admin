@@ -188,10 +188,9 @@ export const PendingSalons = () => {
     },
     {
       header: 'Business Info',
-      accessorKey: 'staff_count',
+      accessorKey: 'gst_number',
       cell: (row) => (
         <div className="text-sm">
-          {row.staff_count && <div className="text-gray-700">👥 {row.staff_count} staff</div>}
           {row.gst_number && <div className="text-xs text-green-600">✓ GST</div>}
           {row.pan_number && <div className="text-xs text-green-600">✓ PAN</div>}
           {row.opening_time && row.closing_time && (
@@ -320,12 +319,6 @@ export const PendingSalons = () => {
                   <p className="text-sm text-gray-600">Address</p>
                   <p className="font-medium">{selectedRequest.business_address}</p>
                 </div>
-                {selectedRequest.staff_count && (
-                  <div>
-                    <p className="text-sm text-gray-600">Staff Count</p>
-                    <p className="font-medium">👥 {selectedRequest.staff_count} staff members</p>
-                  </div>
-                )}
               </div>
             </div>
 

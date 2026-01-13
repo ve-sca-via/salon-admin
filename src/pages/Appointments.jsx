@@ -53,16 +53,23 @@ export const Appointments = () => {
   const columns = [
     {
       header: 'Customer',
-      cell: (row) => (
-        <div>
-          <div className="font-medium text-gray-900">
-            {row.profiles?.full_name || row.customer_name || 'N/A'}
+      cell: (row) => {
+        // Handle nested profiles object or direct customer fields
+        const customerName = row.profiles?.full_name || row.customer_name || 'Unknown Customer';
+        const customerEmail = row.profiles?.email || row.customer_email || '';
+        const customerPhone = row.profiles?.phone || row.customer_phone || '';
+        
+        return (
+          <div>
+            <div className="font-medium text-gray-900">
+              {customerName}
+            </div>
+            <div className="text-sm text-gray-500">
+              {customerEmail || customerPhone}
+            </div>
           </div>
-          <div className="text-sm text-gray-500">
-            {row.profiles?.email || row.customer_email || ''}
-          </div>
-        </div>
-      ),
+        );
+      },
     },
     {
       header: 'Salon',
@@ -125,7 +132,7 @@ export const Appointments = () => {
             {format(new Date(row.booking_date), 'MMM dd, yyyy')}
           </div>
           <div className="text-sm text-gray-500">
-            {row.booking_time}
+            {row.time_slots && row.time_slots.length > 0 ? row.time_slots[0] : 'N/A'}
           </div>
         </div>
       ),
@@ -232,7 +239,7 @@ export const Appointments = () => {
                 return names.length > 0 ? names.join(', ') : 'N/A';
               })()}</p>
               <p><strong>Salon:</strong> {selectedAppointment?.salons?.business_name || selectedAppointment?.salon?.business_name || selectedAppointment?.salon_name || 'N/A'}</p>
-              <p><strong>Date:</strong> {selectedAppointment?.booking_date && format(new Date(selectedAppointment.booking_date), 'MMM dd, yyyy')} at {selectedAppointment?.booking_time || 'N/A'}</p>
+              <p><strong>Date:</strong> {selectedAppointment?.booking_date && format(new Date(selectedAppointment.booking_date), 'MMM dd, yyyy')} at {selectedAppointment?.time_slots && selectedAppointment.time_slots.length > 0 ? selectedAppointment.time_slots[0] : 'N/A'}</p>
               <p><strong>Amount:</strong> ${selectedAppointment?.total_amount || selectedAppointment?.final_amount || 0}</p>
             </div>
           </div>

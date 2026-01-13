@@ -56,7 +56,7 @@ window.monitorAPICalls = () => {
     return originalFetch.apply(this, args);
   };
   
-  console.log('✅ API monitoring enabled. Check console for all API calls.');
+  console.log('API monitoring enabled. Check console for all API calls.');
 };
 
 // Helper: Check prefetch status
@@ -65,7 +65,7 @@ window.checkPrefetch = () => {
   console.log('Expected: API call triggers BEFORE clicking the link');
 };
 
-console.log('🛠️ Cache Debug Helpers Loaded!');
+console.log('Cache Debug Helpers Loaded!');
 console.log('Available commands:');
 console.log('  - getCacheState() - View all cached data');
 console.log('  - monitorAPICalls() - Track all API calls');
