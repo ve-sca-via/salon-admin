@@ -9,7 +9,7 @@ import { adminApi } from '../../services/api/adminApi';
 import { userApi } from '../../services/api/userApi';
 import { appointmentApi } from '../../services/api/appointmentApi';
 import { careerApi } from '../../services/api/careerApi';
-import { serviceApi } from '../../services/api/serviceApi';
+import { serviceCategoryApi } from '../../services/api/serviceCategoryApi';
 import { configApi } from '../../services/api/configApi';
 import { useDispatch } from 'react-redux';
 
@@ -85,7 +85,7 @@ export const Sidebar = () => {
         dispatch(careerApi.util.prefetch('getCareerApplications', {}, { force: false }));
         break;
       case '/services':
-        dispatch(serviceApi.util.prefetch('getAllServices', {}, { force: false }));
+        dispatch(serviceCategoryApi.util.prefetch('getAllServiceCategories', {}, { force: false }));
         break;
       case '/rm-management':
         dispatch(userApi.util.prefetch('getAllRMs', {}, { force: false }));

@@ -3,6 +3,7 @@ import { StatCard } from '../components/common/Card';
 import { Card } from '../components/common/Card';
 import { LoadingSpinner } from '../components/common/LoadingSpinner';
 import { ActivityFeed } from '../components/common/ActivityFeed';
+import { SkeletonStatCard, SkeletonActivityItem } from '../components/common/Skeleton';
 
 export const Dashboard = () => {
   // RTK Query hook - use isFetching for background loading, isLoading only for initial load
@@ -16,7 +17,28 @@ export const Dashboard = () => {
   // Only show full-page loader on INITIAL load (no cached data)
   // If we have cached data, show it while refetching in background
   if (isLoading && !statsData) {
-    return <LoadingSpinner size="xl" className="min-h-screen" />;
+    return (
+      <div className="space-y-6">
+        {/* Skeleton Stats Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {[1, 2, 3, 4].map((i) => (
+            <SkeletonStatCard key={i} />
+          ))}
+        </div>
+        
+        {/* Skeleton Activity Feed */}
+        <div className="bg-white rounded-lg shadow">
+          <div className="p-6">
+            <div className="h-6 w-48 bg-gray-200 rounded mb-4 animate-pulse"></div>
+            <div>
+              {[1, 2, 3, 4, 5].map((i) => (
+                <SkeletonActivityItem key={i} />
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   }
   
   const userGrowth = (stats.new_users_this_month || 0) - (stats.new_users_last_month || 0);

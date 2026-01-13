@@ -11,8 +11,7 @@ import { salonApi } from '../services/api/salonApi';
 import { userApi } from '../services/api/userApi';
 import { appointmentApi } from '../services/api/appointmentApi';
 import { careerApi } from '../services/api/careerApi';
-import { serviceApi } from '../services/api/serviceApi';
-import { staffApi } from '../services/api/staffApi';
+import { serviceCategoryApi } from '../services/api/serviceCategoryApi';
 import { configApi } from '../services/api/configApi';
 
 // Redux Persist Configuration
@@ -24,7 +23,7 @@ const persistConfig = {
   // DO NOT persist caches containing PII (personal identifiable information)
   whitelist: [
     'auth',                // ✅ Auth state (just user role/name, no token)
-    configApi.reducerPath, // ✅ System config (non-sensitive settings)
+    // configApi.reducerPath REMOVED - should fetch fresh to see API calls
     // salonApi.reducerPath REMOVED - was causing stale data on refresh
   ],
   // DO NOT PERSIST (contains PII or needs to be fresh):
@@ -33,8 +32,7 @@ const persistConfig = {
     userApi.reducerPath,         // 🔴 Contains customer emails/phones
     appointmentApi.reducerPath,  // 🔴 Contains customer booking details
     careerApi.reducerPath,       // 🔴 Contains applicant personal info
-    serviceApi.reducerPath,      // Low risk but unnecessary
-    staffApi.reducerPath,        // Contains staff personal info
+    serviceCategoryApi.reducerPath, // Low risk but unnecessary
     salonApi.reducerPath,        // 🔴 Contains salon data - MUST be fresh after mutations
   ],
   // Throttle writes to localStorage (better performance)
@@ -50,8 +48,7 @@ const rootReducer = combineReducers({
   [userApi.reducerPath]: userApi.reducer,
   [appointmentApi.reducerPath]: appointmentApi.reducer,
   [careerApi.reducerPath]: careerApi.reducer,
-  [serviceApi.reducerPath]: serviceApi.reducer,
-  [staffApi.reducerPath]: staffApi.reducer,
+  [serviceCategoryApi.reducerPath]: serviceCategoryApi.reducer,
   [configApi.reducerPath]: configApi.reducer,
 });
 
@@ -66,7 +63,10 @@ export const store = configureStore({
         // Ignore these action types (including redux-persist actions)
         ignoredActions: ['auth/setUser', FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER],
         // Ignore these field paths in all actions
-        ignoredActionPaths: ['payload.timestamp'],
+        ignoredActionPaths: [
+          'payload.timestamp',
+          'meta.arg.originalArgs', // Ignore File objects in RTK Query mutations
+        ],
         // Ignore these paths in the state
         ignoredPaths: ['auth.user'],
       },
@@ -76,8 +76,7 @@ export const store = configureStore({
       .concat(userApi.middleware)
       .concat(appointmentApi.middleware)
       .concat(careerApi.middleware)
-      .concat(serviceApi.middleware)
-      .concat(staffApi.middleware)
+      .concat(serviceCategoryApi.middleware)
       .concat(configApi.middleware),
 });
 

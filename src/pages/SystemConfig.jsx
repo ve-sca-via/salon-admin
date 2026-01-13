@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
 import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
@@ -16,9 +16,16 @@ export const SystemConfig = () => {
   // So configsData is already the array
   const configs = Array.isArray(configsData) ? configsData : (configsData?.data || []);
   const [editingId, setEditingId] = useState(null);
-  const [editValue, setEditValue] = useState('');
+  const [editForm, setEditForm] = useState({
+    config_value: '',
+    config_type: 'string',
+    description: '',
+    is_active: true
+  });
   const [saving, setSaving] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showValue, setShowValue] = useState({});
+  const [menuOpen, setMenuOpen] = useState(null);
   
   // Create modal form state
   const [newConfig, setNewConfig] = useState({
@@ -31,18 +38,31 @@ export const SystemConfig = () => {
 
   const handleEdit = (config) => {
     setEditingId(config.id);
-    setEditValue(config.config_value);
+    setEditForm({
+      config_value: config.config_value,
+      config_type: config.config_type || 'string',
+      description: config.description || '',
+      is_active: config.is_active !== undefined ? config.is_active : true
+    });
   };
 
   const handleCancel = () => {
     setEditingId(null);
-    setEditValue('');
+    setEditForm({
+      config_value: '',
+      config_type: 'string',
+      description: '',
+      is_active: true
+    });
   };
 
   const handleSave = async (configKey) => {
     try {
       setSaving(true);
-      await updateConfig({ configKey, data: { config_value: editValue } }).unwrap();
+      await updateConfig({ 
+        configKey, 
+        data: editForm
+      }).unwrap();
       toast.success('Configuration updated successfully');
       setEditingId(null);
     } catch (error) {
@@ -117,20 +137,32 @@ export const SystemConfig = () => {
     return key.includes('key') || key.includes('secret') || key.includes('password');
   };
 
+  const toggleShowValue = (configId) => {
+    setShowValue(prev => ({ ...prev, [configId]: !prev[configId] }));
+  };
+
+  const toggleMenu = (configId) => {
+    setMenuOpen(prev => prev === configId ? null : configId);
+  };
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = () => {
+      if (menuOpen) setMenuOpen(null);
+    };
+    
+    if (menuOpen) {
+      document.addEventListener('click', handleClickOutside);
+      return () => document.removeEventListener('click', handleClickOutside);
+    }
+  }, [menuOpen]);
+
   const groupedConfigs = configs.reduce((acc, config) => {
     const category = getConfigCategory(config.config_key);
     if (!acc[category]) acc[category] = [];
     acc[category].push(config);
     return acc;
   }, {});
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <LoadingSpinner size="lg" />
-      </div>
-    );
-  }
 
   // Show error state if API call failed
   if (error) {
@@ -204,15 +236,30 @@ export const SystemConfig = () => {
 
   return (
     <div className="space-y-6">
+      {/* Header with Loading Indicator */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">System Configuration</h1>
+        <div className="flex-1">
+          <div className="flex items-center gap-3">
+            <h1 className="text-3xl font-bold text-gray-900">System Configuration</h1>
+            {isLoading && (
+              <div className="flex items-center gap-2 px-3 py-1 bg-blue-50 border border-blue-200 rounded-full">
+                <svg className="animate-spin h-4 w-4 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span className="text-sm text-blue-700 font-medium">Loading...</span>
+              </div>
+            )}
+          </div>
           <p className="text-gray-600 mt-1">
             Manage fees, limits, and platform settings
           </p>
         </div>
         <Button onClick={() => setShowCreateModal(true)}>
-          + Add New Config
+          <svg className="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+          </svg>
+          Add New Config
         </Button>
       </div>
 
@@ -238,90 +285,242 @@ export const SystemConfig = () => {
               {category}
             </h2>
 
-            <div className="space-y-4">
+            <div className="space-y-3">
               {categoryConfigs.map((config) => (
                 <div
                   key={config.id}
-                  className={`border rounded-lg p-4 hover:border-blue-300 transition-colors ${
-                    !config.is_active ? 'opacity-50 bg-gray-50' : 'border-gray-200'
+                  className={`border rounded-lg p-5 transition-all duration-200 ${
+                    editingId === config.id 
+                      ? 'border-blue-400 bg-blue-50 shadow-md' 
+                      : !config.is_active 
+                        ? 'opacity-60 bg-gray-50 border-gray-200' 
+                        : 'border-gray-200 hover:border-gray-300 hover:shadow-sm'
                   }`}
                 >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-medium text-gray-900">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-2 flex-wrap">
+                        <h3 className="font-semibold text-gray-900 text-lg">
                           {config.config_key}
                         </h3>
                         {!config.is_active && (
-                          <span className="px-2 py-0.5 text-xs bg-gray-200 text-gray-600 rounded">
+                          <span className="px-2 py-1 text-xs font-medium bg-gray-200 text-gray-600 rounded-full">
                             Inactive
                           </span>
                         )}
-                        <span className="px-2 py-0.5 text-xs bg-blue-100 text-blue-700 rounded">
+                        <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-700 rounded-full">
                           {config.config_type}
                         </span>
                       </div>
                       
-                      {config.description && (
-                        <p className="text-sm text-gray-600 mb-3">
-                          {config.description}
-                        </p>
-                      )}
-
                       {editingId === config.id ? (
-                        <div className="flex items-center gap-3">
-                          <input
-                            type="text"
-                            value={editValue}
-                            onChange={(e) => setEditValue(e.target.value)}
-                            className="px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                            placeholder="Enter value"
-                          />
-                          <Button
-                            onClick={() => handleSave(config.config_key)}
-                            disabled={saving}
-                            size="sm"
-                          >
-                            {saving ? 'Saving...' : 'Save'}
-                          </Button>
-                          <Button
-                            onClick={handleCancel}
-                            variant="secondary"
-                            size="sm"
-                            disabled={saving}
-                          >
-                            Cancel
-                          </Button>
+                        <div className="space-y-4 mt-4">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Value <span className="text-red-500">*</span>
+                            </label>
+                            <input
+                              type="text"
+                              value={editForm.config_value}
+                              onChange={(e) => setEditForm({ ...editForm, config_value: e.target.value })}
+                              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                              placeholder="Enter value"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Type
+                            </label>
+                            <select
+                              value={editForm.config_type}
+                              onChange={(e) => setEditForm({ ...editForm, config_type: e.target.value })}
+                              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            >
+                              <option value="string">String</option>
+                              <option value="number">Number</option>
+                              <option value="boolean">Boolean</option>
+                              <option value="json">JSON</option>
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Description
+                            </label>
+                            <textarea
+                              value={editForm.description}
+                              onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                              placeholder="Describe what this configuration does"
+                              rows={2}
+                            />
+                          </div>
+
+                          <div className="flex items-center">
+                            <input
+                              type="checkbox"
+                              id={`edit_active_${config.id}`}
+                              checked={editForm.is_active}
+                              onChange={(e) => setEditForm({ ...editForm, is_active: e.target.checked })}
+                              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                            />
+                            <label htmlFor={`edit_active_${config.id}`} className="ml-2 text-sm font-medium text-gray-700">
+                              Active
+                            </label>
+                          </div>
+
+                          <div className="flex items-center gap-3 pt-2">
+                            <Button
+                              onClick={() => handleSave(config.config_key)}
+                              disabled={saving}
+                              size="sm"
+                            >
+                              {saving ? (
+                                <>
+                                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                  </svg>
+                                  Saving...
+                                </>
+                              ) : (
+                                <>
+                                  <svg className="w-4 h-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                  </svg>
+                                  Save Changes
+                                </>
+                              )}
+                            </Button>
+                            <Button
+                              onClick={handleCancel}
+                              variant="secondary"
+                              size="sm"
+                              disabled={saving}
+                            >
+                              <svg className="w-4 h-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                              </svg>
+                              Cancel
+                            </Button>
+                          </div>
                         </div>
                       ) : (
-                        <div className="flex items-center gap-3">
-                          <div className="px-4 py-2 bg-gray-50 rounded-md border border-gray-200">
-                            <span className="font-mono text-lg font-semibold text-gray-900">
-                              {isSensitiveConfig(config.config_key) && config.config_value ? '••••••••' : config.config_value}
-                            </span>
+                        <div className="space-y-3">
+                          {config.description && (
+                            <p className="text-sm text-gray-600 leading-relaxed">
+                              {config.description}
+                            </p>
+                          )}
+
+                          <div className="flex items-center gap-3">
+                            <div className="flex-1 px-4 py-3 bg-gradient-to-r from-gray-50 to-gray-100 rounded-lg border border-gray-200">
+                              <div className="flex items-center justify-between">
+                                <span className="font-mono text-base font-semibold text-gray-900">
+                                  {isSensitiveConfig(config.config_key) ? (
+                                    showValue[config.id] ? config.config_value : '••••••••••••'
+                                  ) : (
+                                    config.config_value
+                                  )}
+                                </span>
+                                {isSensitiveConfig(config.config_key) && (
+                                  <button
+                                    onClick={() => toggleShowValue(config.id)}
+                                    className="ml-3 text-gray-500 hover:text-gray-700 transition-colors"
+                                    title={showValue[config.id] ? 'Hide value' : 'Show value'}
+                                  >
+                                    {showValue[config.id] ? (
+                                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                                      </svg>
+                                    ) : (
+                                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                      </svg>
+                                    )}
+                                  </button>
+                                )}
+                              </div>
+                            </div>
                           </div>
-                          <Button
-                            onClick={() => handleEdit(config)}
-                            variant="secondary"
-                            size="sm"
-                          >
-                            Edit
-                          </Button>
-                          <button
-                            onClick={() => handleDelete(config.config_key)}
-                            className="px-3 py-1 text-sm text-red-600 hover:bg-red-50 border border-red-300 rounded"
-                          >
-                            Delete
-                          </button>
                         </div>
                       )}
                     </div>
+
+                    {editingId !== config.id && (
+                      <div className="relative">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleMenu(config.id);
+                          }}
+                          className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                          title="More options"
+                        >
+                          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                          </svg>
+                        </button>
+
+                        {/* Dropdown Menu */}
+                        {menuOpen === config.id && (
+                          <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <button
+                              onClick={() => {
+                                handleEdit(config);
+                                setMenuOpen(null);
+                              }}
+                              className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-3"
+                            >
+                              <svg className="w-4 h-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                              </svg>
+                              Edit Configuration
+                            </button>
+                            <div className="border-t border-gray-100 my-1"></div>
+                            <button
+                              onClick={() => {
+                                handleDelete(config.config_key);
+                                setMenuOpen(null);
+                              }}
+                              className="w-full px-4 py-2 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-3"
+                            >
+                              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                              Delete Configuration
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
 
-                  <div className="mt-3 text-xs text-gray-500">
-                    Last updated: {new Date(config.updated_at).toLocaleString()}
-                    {config.updated_by && ` by ${config.updated_by}`}
-                  </div>
+                  {editingId !== config.id && (
+                    <div className="mt-4 pt-3 border-t border-gray-200 flex items-center justify-between text-xs text-gray-500">
+                      <div className="flex items-center gap-4">
+                        <span className="flex items-center gap-1">
+                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          {new Date(config.updated_at).toLocaleString()}
+                        </span>
+                        {config.updated_by && (
+                          <span className="flex items-center gap-1">
+                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                            </svg>
+                            {config.updated_by}
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-gray-400">ID: {config.id}</span>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -368,66 +567,90 @@ export const SystemConfig = () => {
         title="Create New Configuration"
         size="md"
       >
-        <form onSubmit={handleCreate} className="space-y-4">
+        <form onSubmit={handleCreate} className="space-y-5">
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="flex gap-3">
+              <svg className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <div className="text-sm text-blue-900">
+                <p className="font-medium mb-1">Configuration Guidelines</p>
+                <ul className="list-disc list-inside space-y-1 text-blue-800">
+                  <li>Use snake_case for config keys (e.g., platform_fee)</li>
+                  <li>Provide clear descriptions for future reference</li>
+                  <li>Changes take effect immediately after creation</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
               Config Key <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
               value={newConfig.config_key}
               onChange={(e) => setNewConfig({ ...newConfig, config_key: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
               placeholder="e.g., platform_fee, max_bookings"
               required
             />
-            <p className="text-xs text-gray-500 mt-1">Use lowercase with underscores (snake_case)</p>
+            <p className="text-xs text-gray-500 mt-1.5 flex items-center gap-1">
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Use lowercase with underscores (snake_case)
+            </p>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Config Type
+            </label>
+            <select
+              value={newConfig.config_type}
+              onChange={(e) => setNewConfig({ ...newConfig, config_type: e.target.value })}
+              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+            >
+              <option value="string">String - Text values</option>
+              <option value="number">Number - Numeric values</option>
+              <option value="boolean">Boolean - True/False</option>
+              <option value="json">JSON - Complex objects</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
               Config Value <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
               value={newConfig.config_value}
               onChange={(e) => setNewConfig({ ...newConfig, config_value: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
               placeholder="Enter configuration value"
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Config Type
-            </label>
-            <select
-              value={newConfig.config_type}
-              onChange={(e) => setNewConfig({ ...newConfig, config_type: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="string">String</option>
-              <option value="number">Number</option>
-              <option value="boolean">Boolean</option>
-              <option value="json">JSON</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
               Description
             </label>
             <textarea
               value={newConfig.description}
               onChange={(e) => setNewConfig({ ...newConfig, description: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="Describe what this configuration does"
+              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+              placeholder="Describe what this configuration does and how it's used"
               rows={3}
             />
+            <p className="text-xs text-gray-500 mt-1.5">
+              Help others understand the purpose of this configuration
+            </p>
           </div>
 
-          <div className="flex items-center">
+          <div className="flex items-center p-3 bg-gray-50 rounded-lg border border-gray-200">
             <input
               type="checkbox"
               id="is_active"
@@ -435,18 +658,24 @@ export const SystemConfig = () => {
               onChange={(e) => setNewConfig({ ...newConfig, is_active: e.target.checked })}
               className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
             />
-            <label htmlFor="is_active" className="ml-2 text-sm text-gray-700">
-              Active
+            <label htmlFor="is_active" className="ml-3 text-sm font-medium text-gray-700">
+              Set as Active
             </label>
+            <span className="ml-auto text-xs text-gray-500">
+              {newConfig.is_active ? '✓ Will be active' : 'Will be inactive'}
+            </span>
           </div>
 
-          <div className="flex justify-end gap-3 pt-4">
+          <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
             <Button
               type="button"
               variant="outline"
               onClick={handleCloseModal}
               disabled={saving}
             >
+              <svg className="w-4 h-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
               Cancel
             </Button>
             <Button
@@ -454,7 +683,22 @@ export const SystemConfig = () => {
               variant="primary"
               disabled={saving}
             >
-              {saving ? 'Creating...' : 'Create Configuration'}
+              {saving ? (
+                <>
+                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Creating...
+                </>
+              ) : (
+                <>
+                  <svg className="w-4 h-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                  </svg>
+                  Create Configuration
+                </>
+              )}
             </Button>
           </div>
         </form>

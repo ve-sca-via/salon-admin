@@ -21,9 +21,7 @@ export const careerApi = createApi({
         };
       },
       providesTags: ['CareerApplications'],
-      keepUnusedDataFor: 60, // Cache for 1 minute
-      refetchOnMountOrArgChange: true, // ALWAYS refetch
-      refetchOnFocus: true,
+      keepUnusedDataFor: 300, // Cache for 5 minutes
       refetchOnReconnect: true,
     }),
 

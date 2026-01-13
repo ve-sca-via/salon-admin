@@ -160,14 +160,6 @@ export const RMManagement = () => {
     ? rms.reduce((max, rm) => (rm.performance_score || 0) > (max.performance_score || 0) ? rm : max, rms[0]) 
     : null;
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <LoadingSpinner size="lg" />
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">

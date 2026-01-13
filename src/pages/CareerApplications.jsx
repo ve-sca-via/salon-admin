@@ -5,7 +5,7 @@ import {
   useLazyGetDocumentDownloadUrlQuery 
 } from '../services/api/careerApi';
 import { Card } from '../components/common/Card';
-import { LoadingSpinner } from '../components/common/LoadingSpinner';
+import { SkeletonCard } from '../components/common/Skeleton';
 import { Modal } from '../components/common/Modal';
 import { Button } from '../components/common/Button';
 import { toast } from 'react-toastify';
@@ -79,10 +79,6 @@ export const CareerApplications = () => {
     });
   };
 
-  if (isLoading) {
-    return <LoadingSpinner size="xl" className="min-h-screen" />;
-  }
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -124,28 +120,42 @@ export const CareerApplications = () => {
 
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
-          <div className="text-sm text-gray-600">Total Applications</div>
-          <div className="text-2xl font-bold text-gray-900">{applications.length}</div>
-        </Card>
-        <Card>
-          <div className="text-sm text-gray-600">Pending</div>
-          <div className="text-2xl font-bold text-yellow-600">
-            {applications.filter(a => a.status === 'pending').length}
-          </div>
-        </Card>
-        <Card>
-          <div className="text-sm text-gray-600">Shortlisted</div>
-          <div className="text-2xl font-bold text-green-600">
-            {applications.filter(a => a.status === 'shortlisted').length}
-          </div>
-        </Card>
-        <Card>
-          <div className="text-sm text-gray-600">Hired</div>
-          <div className="text-2xl font-bold text-emerald-600">
-            {applications.filter(a => a.status === 'hired').length}
-          </div>
-        </Card>
+        {isLoading ? (
+          // Skeleton stat cards
+          Array.from({ length: 4 }).map((_, i) => (
+            <Card key={i}>
+              <div className="animate-pulse space-y-2">
+                <div className="h-4 bg-gray-200 rounded w-24"></div>
+                <div className="h-8 bg-gray-200 rounded w-12"></div>
+              </div>
+            </Card>
+          ))
+        ) : (
+          <>
+            <Card>
+              <div className="text-sm text-gray-600">Total Applications</div>
+              <div className="text-2xl font-bold text-gray-900">{applications.length}</div>
+            </Card>
+            <Card>
+              <div className="text-sm text-gray-600">Pending</div>
+              <div className="text-2xl font-bold text-yellow-600">
+                {applications.filter(a => a.status === 'pending').length}
+              </div>
+            </Card>
+            <Card>
+              <div className="text-sm text-gray-600">Shortlisted</div>
+              <div className="text-2xl font-bold text-green-600">
+                {applications.filter(a => a.status === 'shortlisted').length}
+              </div>
+            </Card>
+            <Card>
+              <div className="text-sm text-gray-600">Hired</div>
+              <div className="text-2xl font-bold text-emerald-600">
+                {applications.filter(a => a.status === 'hired').length}
+              </div>
+            </Card>
+          </>
+        )}
       </div>
 
       {/* Applications Table */}
@@ -175,7 +185,44 @@ export const CareerApplications = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {applications.length === 0 ? (
+              {isLoading ? (
+                // Skeleton loading rows
+                Array.from({ length: 5 }).map((_, i) => (
+                  <tr key={i}>
+                    <td className="px-6 py-4">
+                      <div className="animate-pulse space-y-2">
+                        <div className="h-4 bg-gray-200 rounded w-32"></div>
+                        <div className="h-3 bg-gray-200 rounded w-40"></div>
+                        <div className="h-3 bg-gray-200 rounded w-28"></div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="animate-pulse space-y-2">
+                        <div className="h-4 bg-gray-200 rounded w-24"></div>
+                        <div className="h-3 bg-gray-200 rounded w-20"></div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="animate-pulse space-y-2">
+                        <div className="h-4 bg-gray-200 rounded w-16"></div>
+                        <div className="h-3 bg-gray-200 rounded w-24"></div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="animate-pulse h-3 bg-gray-200 rounded w-28"></div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="animate-pulse h-6 bg-gray-200 rounded-full w-20"></div>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <div className="animate-pulse flex justify-end gap-2">
+                        <div className="h-4 bg-gray-200 rounded w-10"></div>
+                        <div className="h-4 bg-gray-200 rounded w-12"></div>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              ) : applications.length === 0 ? (
                 <tr>
                   <td colSpan="6" className="px-6 py-12 text-center text-gray-500">
                     No applications found
@@ -244,8 +291,6 @@ export const CareerApplications = () => {
           onDownload={handleDownloadDocument}
         />
       )}
-
-      {/* Update Status Modal */}
       {showUpdateModal && selectedApplication && (
         <UpdateStatusModal
           application={selectedApplication}
@@ -262,6 +307,7 @@ export const CareerApplications = () => {
               toast.success('Application updated successfully');
               setShowUpdateModal(false);
               setSelectedApplication(null);
+              refetch();
             } catch (error) {
               toast.error('Failed to update application');
             }
@@ -269,218 +315,111 @@ export const CareerApplications = () => {
           isLoading={isUpdating}
         />
       )}
+
+
     </div>
   );
 };
 
 // Application Details Modal Component
 const ApplicationDetailsModal = ({ application, onClose, onDownload }) => {
+  const formatDate = (dateString) => {
+    if (!dateString) return 'N/A';
+    return new Date(dateString).toLocaleDateString('en-IN', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  const InfoRow = ({ label, value }) => (
+    <div>
+      <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">{label}</label>
+      <p className="text-gray-900 font-medium mt-1">{value}</p>
+    </div>
+  );
+
   return (
-    <Modal isOpen={true} onClose={onClose} title="Application Details" size="2xl">
-      <div className="space-y-6">
+    <Modal isOpen={true} onClose={onClose} title="Application Details" size="lg">
+      <div className="max-h-[70vh] overflow-y-auto space-y-5">
+        {/* Application Header with Number and Status */}
+        <div className="flex items-center justify-between pb-4 border-b border-gray-200">
+          <div>
+            <p className="text-xs text-gray-600">Application #</p>
+            <p className="text-lg font-bold text-gray-900 font-mono">{application.application_number || application.id}</p>
+          </div>
+          <div className="text-right">
+            <p className="text-xs text-gray-600">Applied on</p>
+            <p className="text-sm font-medium text-gray-900">{formatDate(application.created_at)}</p>
+          </div>
+        </div>
+
         {/* Personal Information */}
         <div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-3 border-b pb-2">
-            Personal Information
-          </h3>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="text-sm font-medium text-gray-500">Full Name</label>
-              <p className="text-gray-900">{application.full_name}</p>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-gray-500">Email</label>
-              <p className="text-gray-900">{application.email}</p>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-gray-500">Phone</label>
-              <p className="text-gray-900">{application.phone}</p>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-gray-500">Current City</label>
-              <p className="text-gray-900">{application.current_city || 'N/A'}</p>
-            </div>
+          <h4 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3">Personal Details</h4>
+          <div className="grid grid-cols-2 gap-4 bg-gray-50 p-3 rounded-lg">
+            <InfoRow label="Full Name" value={application.full_name} />
+            <InfoRow label="Phone" value={application.phone} />
             <div className="col-span-2">
-              <label className="text-sm font-medium text-gray-500">Address</label>
-              <p className="text-gray-900">{application.current_address || 'N/A'}</p>
+              <InfoRow label="Email" value={application.email} />
             </div>
-            <div>
-              <label className="text-sm font-medium text-gray-500">Willing to Relocate</label>
-              <p className="text-gray-900">{application.willing_to_relocate ? 'Yes' : 'No'}</p>
-            </div>
+            <InfoRow label="City" value={application.current_city || 'N/A'} />
+            <InfoRow label="Relocation" value={application.willing_to_relocate ? 'Yes' : 'No'} />
           </div>
+          {application.current_address && (
+            <div className="mt-3">
+              <InfoRow label="Address" value={application.current_address} />
+            </div>
+          )}
         </div>
 
         {/* Job Details */}
         <div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-3 border-b pb-2">
-            Job Details
-          </h3>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="text-sm font-medium text-gray-500">Position</label>
-              <p className="text-gray-900">{application.position}</p>
+          <h4 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3">Position & Experience</h4>
+          <div className="grid grid-cols-2 gap-4 bg-gray-50 p-3 rounded-lg">
+            <div className="col-span-2">
+              <InfoRow label="Position Applied For" value={application.position} />
             </div>
-            <div>
-              <label className="text-sm font-medium text-gray-500">Experience</label>
-              <p className="text-gray-900">{application.experience_years} years</p>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-gray-500">Previous Company</label>
-              <p className="text-gray-900">{application.previous_company || 'N/A'}</p>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-gray-500">Current Salary</label>
-              <p className="text-gray-900">
-                {application.current_salary ? `₹${application.current_salary.toLocaleString('en-IN')}` : 'N/A'}
-              </p>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-gray-500">Expected Salary</label>
-              <p className="text-gray-900">
-                {application.expected_salary ? `₹${application.expected_salary.toLocaleString('en-IN')}` : 'N/A'}
-              </p>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-gray-500">Notice Period</label>
-              <p className="text-gray-900">{application.notice_period_days ? `${application.notice_period_days} days` : 'N/A'}</p>
-            </div>
+            <InfoRow label="Experience" value={`${application.experience_years} years`} />
+            <InfoRow label="Previous Company" value={application.previous_company || 'N/A'} />
+            <InfoRow label="Current Salary" value={application.current_salary ? `₹${application.current_salary.toLocaleString('en-IN')}` : 'N/A'} />
+            <InfoRow label="Expected Salary" value={application.expected_salary ? `₹${application.expected_salary.toLocaleString('en-IN')}` : 'N/A'} />
+            <InfoRow label="Notice Period" value={application.notice_period_days ? `${application.notice_period_days} days` : 'N/A'} />
           </div>
         </div>
 
         {/* Education */}
         <div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-3 border-b pb-2">
-            Education
-          </h3>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="text-sm font-medium text-gray-500">Highest Qualification</label>
-              <p className="text-gray-900">{application.highest_qualification || 'N/A'}</p>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-gray-500">University</label>
-              <p className="text-gray-900">{application.university_name || 'N/A'}</p>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-gray-500">Graduation Year</label>
-              <p className="text-gray-900">{application.graduation_year || 'N/A'}</p>
+          <h4 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3">Education</h4>
+          <div className="grid grid-cols-2 gap-4 bg-gray-50 p-3 rounded-lg">
+            <InfoRow label="Qualification" value={application.highest_qualification || 'N/A'} />
+            <InfoRow label="Graduation Year" value={application.graduation_year || 'N/A'} />
+            <div className="col-span-2">
+              <InfoRow label="University" value={application.university_name || 'N/A'} />
             </div>
           </div>
         </div>
 
-        {/* Documents */}
-        <div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-3 border-b pb-2">
-            Documents
-          </h3>
-          <div className="grid grid-cols-2 gap-3">
-            {application.resume_url && (
-              <button
-                onClick={() => onDownload('resume')}
-                className="flex items-center justify-center px-4 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100"
-              >
-                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                Resume
-              </button>
-            )}
-            {application.aadhaar_url && (
-              <button
-                onClick={() => onDownload('aadhaar')}
-                className="flex items-center justify-center px-4 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100"
-              >
-                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                Aadhaar Card
-              </button>
-            )}
-            {application.pan_url && (
-              <button
-                onClick={() => onDownload('pan')}
-                className="flex items-center justify-center px-4 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100"
-              >
-                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                PAN Card
-              </button>
-            )}
-            {application.photo_url && (
-              <button
-                onClick={() => onDownload('photo')}
-                className="flex items-center justify-center px-4 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100"
-              >
-                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-                Photo
-              </button>
-            )}
-            {application.address_proof_url && (
-              <button
-                onClick={() => onDownload('address_proof')}
-                className="flex items-center justify-center px-4 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100"
-              >
-                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                Address Proof
-              </button>
-            )}
-            {application.experience_letter_url && (
-              <button
-                onClick={() => onDownload('experience_letter')}
-                className="flex items-center justify-center px-4 py-2 bg-gray-50 text-gray-700 rounded-lg hover:bg-gray-100"
-              >
-                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                Experience Letter
-              </button>
-            )}
-            {application.salary_slip_url && (
-              <button
-                onClick={() => onDownload('salary_slip')}
-                className="flex items-center justify-center px-4 py-2 bg-gray-50 text-gray-700 rounded-lg hover:bg-gray-100"
-              >
-                <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                Salary Slip
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Additional Info */}
-        {(application.cover_letter || application.linkedin_url || application.portfolio_url) && (
+        {/* Additional Links */}
+        {(application.linkedin_url || application.portfolio_url) && (
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-3 border-b pb-2">
-              Additional Information
-            </h3>
-            {application.cover_letter && (
-              <div className="mb-3">
-                <label className="text-sm font-medium text-gray-500">Cover Letter</label>
-                <p className="text-gray-900 whitespace-pre-wrap">{application.cover_letter}</p>
-              </div>
-            )}
-            <div className="grid grid-cols-2 gap-4">
+            <h4 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3">Online Profiles</h4>
+            <div className="space-y-2">
               {application.linkedin_url && (
-                <div>
-                  <label className="text-sm font-medium text-gray-500">LinkedIn</label>
-                  <a href={application.linkedin_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline break-all">
-                    {application.linkedin_url}
+                <div className="flex items-center justify-between bg-gray-50 p-3 rounded-lg">
+                  <span className="text-sm text-gray-700">LinkedIn</span>
+                  <a href={application.linkedin_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                    View Profile →
                   </a>
                 </div>
               )}
               {application.portfolio_url && (
-                <div>
-                  <label className="text-sm font-medium text-gray-500">Portfolio</label>
-                  <a href={application.portfolio_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline break-all">
-                    {application.portfolio_url}
+                <div className="flex items-center justify-between bg-gray-50 p-3 rounded-lg">
+                  <span className="text-sm text-gray-700">Portfolio</span>
+                  <a href={application.portfolio_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                    View Portfolio →
                   </a>
                 </div>
               )}
@@ -488,22 +427,67 @@ const ApplicationDetailsModal = ({ application, onClose, onDownload }) => {
           </div>
         )}
 
-        {/* Review Info */}
+        {/* Cover Letter */}
+        {application.cover_letter && (
+          <div>
+            <h4 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3">Cover Letter</h4>
+            <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+              <p className="text-sm text-gray-800 whitespace-pre-wrap">{application.cover_letter}</p>
+            </div>
+          </div>
+        )}
+
+        {/* Documents */}
+        <div>
+          <h4 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3">Documents</h4>
+          <div className="grid grid-cols-3 gap-2">
+            {[
+              { key: 'resume', label: 'Resume', required: true },
+              { key: 'aadhaar', label: 'Aadhaar' },
+              { key: 'pan', label: 'PAN' },
+              { key: 'photo', label: 'Photo', required: true },
+              { key: 'address_proof', label: 'Address Proof', required: true },
+              { key: 'experience_letter', label: 'Experience Letter' },
+              { key: 'salary_slip', label: 'Salary Slip' },
+            ].map(doc => {
+              const urlKey = `${doc.key}_url`;
+              const hasDoc = application[urlKey];
+              return (
+                <button
+                  key={doc.key}
+                  onClick={() => hasDoc && onDownload(doc.key)}
+                  disabled={!hasDoc}
+                  className={`flex flex-col items-center justify-center px-3 py-3 rounded-lg text-center text-sm font-medium transition-colors ${
+                    hasDoc
+                      ? 'bg-blue-50 text-blue-700 hover:bg-blue-100 cursor-pointer'
+                      : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                  }`}
+                  title={hasDoc ? `Download ${doc.label}` : `${doc.label} not uploaded`}
+                >
+                  <svg className="w-4 h-4 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                  </svg>
+                  {doc.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Review Information */}
         {(application.admin_notes || application.rejection_reason) && (
           <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-3 border-b pb-2">
-              Review Information
-            </h3>
+            <h4 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3">Admin Review</h4>
             {application.admin_notes && (
-              <div className="mb-3">
-                <label className="text-sm font-medium text-gray-500">Admin Notes</label>
-                <p className="text-gray-900">{application.admin_notes}</p>
+              <div className="mb-3 bg-blue-50 p-3 rounded-lg border-l-4 border-blue-400">
+                <p className="text-xs font-semibold text-blue-800 mb-1">Notes</p>
+                <p className="text-sm text-blue-900">{application.admin_notes}</p>
               </div>
             )}
             {application.rejection_reason && (
-              <div>
-                <label className="text-sm font-medium text-gray-500">Rejection Reason</label>
-                <p className="text-red-600">{application.rejection_reason}</p>
+              <div className="bg-red-50 p-3 rounded-lg border-l-4 border-red-400">
+                <p className="text-xs font-semibold text-red-800 mb-1">Rejection Reason</p>
+                <p className="text-sm text-red-900">{application.rejection_reason}</p>
               </div>
             )}
           </div>
@@ -515,7 +499,6 @@ const ApplicationDetailsModal = ({ application, onClose, onDownload }) => {
 
 // Update Status Modal Component
 const UpdateStatusModal = ({ application, onClose, onUpdate, isLoading }) => {
-  // Format datetime for datetime-local input (YYYY-MM-DDTHH:mm)
   const formatDateTimeLocal = (isoString) => {
     if (!isoString) return '';
     const date = new Date(isoString);
@@ -538,17 +521,14 @@ const UpdateStatusModal = ({ application, onClose, onUpdate, isLoading }) => {
   const handleSubmit = (e) => {
     e.preventDefault();
     
-    // Prepare data for submission
     const submitData = { ...formData };
     
-    // Convert datetime-local to ISO format if provided, otherwise set to null
     if (submitData.interview_scheduled_at && submitData.interview_scheduled_at.trim() !== '') {
       submitData.interview_scheduled_at = new Date(submitData.interview_scheduled_at).toISOString();
     } else {
       submitData.interview_scheduled_at = null;
     }
     
-    // Convert empty strings to null for optional fields
     if (!submitData.admin_notes || submitData.admin_notes.trim() === '') {
       submitData.admin_notes = null;
     }
@@ -563,16 +543,23 @@ const UpdateStatusModal = ({ application, onClose, onUpdate, isLoading }) => {
   };
 
   return (
-    <Modal isOpen={true} onClose={onClose} title="Update Application Status">
+    <Modal isOpen={true} onClose={onClose} title="Update Application Status" size="md">
       <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Applicant Info Header */}
+        <div className="bg-blue-50 p-3 rounded-lg border border-blue-200 mb-4">
+          <p className="text-sm text-blue-900 font-medium">{application.full_name}</p>
+          <p className="text-xs text-blue-700">{application.position} • {application.email}</p>
+        </div>
+
+        {/* Status Selection */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Status
+          <label className="block text-sm font-bold text-gray-900 uppercase tracking-wider mb-2">
+            New Status
           </label>
           <select
             value={formData.status}
             onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-medium"
             required
           >
             {STATUS_OPTIONS.map(option => (
@@ -583,65 +570,69 @@ const UpdateStatusModal = ({ application, onClose, onUpdate, isLoading }) => {
           </select>
         </div>
 
+        {/* Admin Notes */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-bold text-gray-900 uppercase tracking-wider mb-2">
             Admin Notes
           </label>
           <textarea
             value={formData.admin_notes}
             onChange={(e) => setFormData({ ...formData, admin_notes: e.target.value })}
             rows={3}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
             placeholder="Add notes about this application..."
           />
         </div>
 
+        {/* Rejection Reason - Only show when status is rejected */}
         {formData.status === 'rejected' && (
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+          <div className="bg-red-50 p-3 rounded-lg border border-red-200">
+            <label className="block text-sm font-bold text-red-900 uppercase tracking-wider mb-2">
               Rejection Reason
             </label>
             <textarea
               value={formData.rejection_reason}
               onChange={(e) => setFormData({ ...formData, rejection_reason: e.target.value })}
               rows={3}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-3 py-2 border border-red-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent resize-none"
               placeholder="Reason for rejection..."
               required
             />
           </div>
         )}
 
+        {/* Interview Details - Only show when status is interview_scheduled */}
         {formData.status === 'interview_scheduled' && (
-          <>
+          <div className="bg-purple-50 p-3 rounded-lg border border-purple-200 space-y-3">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-bold text-purple-900 uppercase tracking-wider mb-2">
                 Interview Date & Time
               </label>
               <input
                 type="datetime-local"
                 value={formData.interview_scheduled_at}
                 onChange={(e) => setFormData({ ...formData, interview_scheduled_at: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-bold text-purple-900 uppercase tracking-wider mb-2">
                 Interview Location
               </label>
               <input
                 type="text"
                 value={formData.interview_location}
                 onChange={(e) => setFormData({ ...formData, interview_location: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-purple-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 placeholder="Office address or video call link..."
               />
             </div>
-          </>
+          </div>
         )}
 
-        <div className="flex justify-end gap-3 pt-4">
-          <Button type="button" variant="secondary" onClick={onClose}>
+        {/* Action Buttons */}
+        <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
+          <Button type="button" variant="ghost" onClick={onClose} disabled={isLoading}>
             Cancel
           </Button>
           <Button type="submit" disabled={isLoading}>
