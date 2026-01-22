@@ -35,7 +35,9 @@ export const Users = () => {
     password: '',
     full_name: '',
     phone: '',
-    role: ROLES.RELATIONSHIP_MANAGER
+    role: ROLES.RELATIONSHIP_MANAGER,
+    age: '',
+    gender: ''
   });
   const [showPassword, setShowPassword] = useState(false);
   const [formErrors, setFormErrors] = useState({});
@@ -112,6 +114,21 @@ export const Users = () => {
       errors.full_name = 'Full name is required';
     }
 
+    // Age validation
+    if (!createForm.age) {
+      errors.age = 'Age is required';
+    } else {
+      const ageNum = parseInt(createForm.age);
+      if (isNaN(ageNum) || ageNum < 18 || ageNum > 100) {
+        errors.age = 'Age must be between 18 and 100';
+      }
+    }
+
+    // Gender validation
+    if (!createForm.gender) {
+      errors.gender = 'Gender is required';
+    }
+
     // Phone validation (if provided)
     if (createForm.phone && createForm.phone.length < 10) {
       errors.phone = 'Phone number must be at least 10 digits';
@@ -138,7 +155,9 @@ export const Users = () => {
         password: '',
         full_name: '',
         phone: '',
-        role: ROLES.RELATIONSHIP_MANAGER
+        role: ROLES.RELATIONSHIP_MANAGER,
+        age: '',
+        gender: ''
       });
       setShowPassword(false);
       setFormErrors({});
@@ -308,7 +327,9 @@ export const Users = () => {
               password: generateStrongPassword(),
               full_name: '',
               phone: '',
-              role: ROLES.RELATIONSHIP_MANAGER
+              role: ROLES.RELATIONSHIP_MANAGER,
+              age: '',
+              gender: ''
             });
             setIsCreateModalOpen(true);
           }}
@@ -401,7 +422,9 @@ export const Users = () => {
             password: generateStrongPassword(), 
             full_name: '', 
             phone: '', 
-            role: ROLES.RELATIONSHIP_MANAGER 
+            role: ROLES.RELATIONSHIP_MANAGER,
+            age: '',
+            gender: ''
           });
           setShowPassword(false);
           setFormErrors({});
@@ -416,7 +439,9 @@ export const Users = () => {
                 password: generateStrongPassword(), 
                 full_name: '', 
                 phone: '', 
-                role: ROLES.RELATIONSHIP_MANAGER 
+                role: ROLES.RELATIONSHIP_MANAGER,
+                age: '',
+                gender: ''
               });
               setShowPassword(false);
               setFormErrors({});
@@ -562,6 +587,45 @@ export const Users = () => {
               <p className="text-xs text-gray-500 -mt-2">
                 Optional, but recommended for better communication
               </p>
+
+              <Input
+                label="Age *"
+                type="number"
+                value={createForm.age}
+                onChange={(e) => {
+                  setCreateForm({ ...createForm, age: e.target.value });
+                  if (formErrors.age) {
+                    setFormErrors({ ...formErrors, age: undefined });
+                  }
+                }}
+                placeholder="Enter age"
+                error={formErrors.age}
+                min="18"
+                max="100"
+                required
+              />
+              <p className="text-xs text-gray-500 -mt-2">
+                Must be at least 18 years old
+              </p>
+
+              <Select
+                label="Gender *"
+                value={createForm.gender}
+                onChange={(e) => {
+                  setCreateForm({ ...createForm, gender: e.target.value });
+                  if (formErrors.gender) {
+                    setFormErrors({ ...formErrors, gender: undefined });
+                  }
+                }}
+                options={[
+                  { value: '', label: 'Select gender' },
+                  { value: 'male', label: 'Male' },
+                  { value: 'female', label: 'Female' },
+                  { value: 'other', label: 'Other' }
+                ]}
+                error={formErrors.gender}
+                required
+              />
             </div>
           </div>
 
