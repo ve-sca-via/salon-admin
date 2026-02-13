@@ -71,6 +71,26 @@ const ActivityIcon = ({ action }) => {
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
       </svg>
     ),
+    service_category_created: (
+      <svg className="w-5 h-5 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+      </svg>
+    ),
+    service_category_updated: (
+      <svg className="w-5 h-5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+      </svg>
+    ),
+    service_category_deleted: (
+      <svg className="w-5 h-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+      </svg>
+    ),
+    service_category_status_toggled: (
+      <svg className="w-5 h-5 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+      </svg>
+    ),
     default: (
       <svg className="w-5 h-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -139,6 +159,19 @@ const getActivityDescription = (activity) => {
       };
       const emailType = emailTypeMap[details?.email_type] || details?.email_type?.replace(/_/g, ' ');
       return `Sent ${emailType} email to ${details?.recipient || 'recipient'}`;
+    
+    case 'service_category_created':
+      return `Created service category "${details?.name || 'Unknown'}"`;
+    
+    case 'service_category_updated':
+      return `Updated service category "${details?.name || 'Unknown'}"`;
+    
+    case 'service_category_deleted':
+      return `Deleted service category "${details?.name || 'Unknown'}"`;
+    
+    case 'service_category_status_toggled':
+      const status = details?.is_active ? 'activated' : 'deactivated';
+      return `${status.charAt(0).toUpperCase() + status.slice(1)} service category "${details?.name || 'Unknown'}"`;
     
     default:
       return action.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());

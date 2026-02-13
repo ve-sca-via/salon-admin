@@ -32,7 +32,19 @@ export const login = async (email, password) => {
 
     return response.data;
   } catch (error) {
-    const message = error.response?.data?.detail || error.message || 'Login failed';
+    // Extract error message from response
+    let message = 'Login failed. Please try again.';
+    
+    if (error.response?.data?.detail) {
+      message = error.response.data.detail;
+    } else if (error.response?.status === 401) {
+      message = 'Invalid email or password. Please check your credentials.';
+    } else if (error.response?.status === 403) {
+      message = 'Access denied. Please contact support.';
+    } else if (!error.response) {
+      message = 'Unable to connect to server. Please check your internet connection.';
+    }
+    
     throw new Error(message);
   }
 };
