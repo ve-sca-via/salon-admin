@@ -167,6 +167,15 @@ export const salonApi = createApi({
         'DashboardStats',
       ],
     }),
+
+    // Send payment reminder
+    sendPaymentReminder: builder.mutation({
+      query: (salonId) => ({
+        url: `/api/v1/admin/salons/${salonId}/send-payment-reminder`,
+        method: 'post',
+      }),
+      invalidatesTags: ['RecentActivity'],
+    }),
   }),
 });
 
@@ -179,4 +188,5 @@ export const {
   useUpdateSalonMutation,
   useDeleteSalonMutation,
   useToggleSalonStatusMutation,
+  useSendPaymentReminderMutation,
 } = salonApi;

@@ -1,19 +1,20 @@
 import { useState, useMemo } from 'react';
 import { 
   useGetAllSalonsQuery, 
-  useUpdateSalonMutation, 
-  useToggleSalonStatusMutation
+  useToggleSalonStatusMutation,
+  useSendPaymentReminderMutation
 } from '../services/api/salonApi';
 import { Table } from '../components/common/Table';
 import { Modal } from '../components/common/Modal';
 import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
 import { Badge } from '../components/common/Badge';
+import { Dropdown, DropdownItem, DropdownDivider, DropdownTrigger } from '../components/common/Dropdown';
 import { toast } from 'react-toastify';
 import { 
-  CheckCircle, XCircle, AlertCircle, DollarSign, Star, 
+  CheckCircle, XCircle, AlertCircle, Star, 
   MapPin, Phone, Mail, User, Users, Eye, 
-  Power, Shield, TrendingUp, Calendar, Search, Filter
+  Power, Shield, TrendingUp, Calendar, Search, Filter, Send
 } from 'lucide-react';
 
 const Salons = () => {
@@ -22,11 +23,12 @@ const Salons = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSalon, setSelectedSalon] = useState(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [sendingReminder, setSendingReminder] = useState(null);
 
   // RTK Query hooks - NOW FETCHING ALL SALONS
   const { data: salonsData, isLoading } = useGetAllSalonsQuery({});
-  const [updateSalon] = useUpdateSalonMutation();
   const [toggleStatus] = useToggleSalonStatusMutation();
+  const [sendPaymentReminder] = useSendPaymentReminderMutation();
   
   // Smart filtering based on business needs
   const filteredSalons = useMemo(() => {
@@ -111,6 +113,18 @@ const Salons = () => {
       toast.success(`Salon ${salon.is_active ? 'deactivated' : 'activated'} successfully`);
     } catch (error) {
       toast.error('Failed to toggle salon status');
+    }
+  };
+
+  const handleSendPaymentReminder = async (salon) => {
+    setSendingReminder(salon.id);
+    try {
+      await sendPaymentReminder(salon.id).unwrap();
+      toast.success(`Payment reminder sent to ${salon.email}`);
+    } catch (error) {
+      toast.error(error?.data?.detail || 'Failed to send payment reminder');
+    } finally {
+      setSendingReminder(null);
     }
   };
 
@@ -236,34 +250,43 @@ const Salons = () => {
       header: 'Actions',
       accessor: 'actions',
       cell: (salon) => (
-        <div className="flex gap-2">
-          <Button
-            size="sm"
-            variant="outline"
+        <Dropdown trigger={<DropdownTrigger />}>
+          <DropdownItem
+            icon={Eye}
+            label="View Details"
             onClick={() => openDetailModal(salon)}
-            title="View Details"
-          >
-            <Eye className="w-4 h-4" />
-          </Button>
+            variant="default"
+          />
           
-          <Button
-            size="sm"
-            variant={salon.is_verified ? 'outline' : 'primary'}
+          <DropdownDivider />
+          
+          <DropdownItem
+            icon={Shield}
+            label={salon.is_verified ? 'Unverify Salon' : 'Verify Salon'}
             onClick={() => handleToggleVerification(salon)}
-            title={salon.is_verified ? 'Unverify' : 'Verify'}
-          >
-            <Shield className="w-4 h-4" />
-          </Button>
+            variant={salon.is_verified ? 'warning' : 'success'}
+          />
           
-          <Button
-            size="sm"
-            variant={salon.is_active ? 'error' : 'success'}
+          <DropdownItem
+            icon={Power}
+            label={salon.is_active ? 'Deactivate Salon' : 'Activate Salon'}
             onClick={() => handleToggleActive(salon)}
-            title={salon.is_active ? 'Deactivate' : 'Activate'}
-          >
-            <Power className="w-4 h-4" />
-          </Button>
-        </div>
+            variant={salon.is_active ? 'error' : 'success'}
+          />
+          
+          {!salon.registration_fee_paid && (
+            <>
+              <DropdownDivider />
+              <DropdownItem
+                icon={Send}
+                label={sendingReminder === salon.id ? "Sending..." : "Send Payment Reminder"}
+                onClick={() => handleSendPaymentReminder(salon)}
+                variant="warning"
+                disabled={sendingReminder === salon.id}
+              />
+            </>
+          )}
+        </Dropdown>
       )
     }
   ];
@@ -414,9 +437,9 @@ const Salons = () => {
                 </div>
                 <div className="flex items-center gap-2">
                   {selectedSalon.registration_fee_paid ? (
-                    <DollarSign className="w-5 h-5 text-green-500" />
+                    <CheckCircle className="w-5 h-5 text-green-500" />
                   ) : (
-                    <DollarSign className="w-5 h-5 text-red-500" />
+                    <XCircle className="w-5 h-5 text-red-500" />
                   )}
                   <span>{selectedSalon.registration_fee_paid ? 'Payment Complete' : 'Payment Pending'}</span>
                 </div>
@@ -459,7 +482,7 @@ const Salons = () => {
                 )}
                 {selectedSalon.registration_paid_at && (
                   <div className="flex items-center gap-2">
-                    <DollarSign className="w-4 h-4 text-green-500" />
+                    <CheckCircle className="w-4 h-4 text-green-500" />
                     <span className="text-gray-600">Payment Received:</span>
                     <span className="font-medium">{new Date(selectedSalon.registration_paid_at).toLocaleString()}</span>
                   </div>
