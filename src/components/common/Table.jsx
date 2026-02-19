@@ -32,7 +32,12 @@ export const Table = ({ columns, data, isLoading, pagination, onPageChange }) =>
           {data.map((row, rowIdx) => (
             <tr key={rowIdx} className="hover:bg-gray-50">
               {columns.map((column, colIdx) => (
-                <td key={colIdx} className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                <td 
+                  key={colIdx} 
+                  className={`px-6 py-4 text-sm text-gray-900 ${
+                    column.accessor === 'actions' ? '' : 'whitespace-nowrap'
+                  }`}
+                >
                   {column.cell ? column.cell(row) : row[column.accessorKey]}
                 </td>
               ))}
