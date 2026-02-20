@@ -1,4 +1,4 @@
-name: CI
+name: salon-admin-panel-ci
 
 on:
   pull_request:
