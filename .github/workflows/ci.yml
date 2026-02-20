@@ -1,53 +1,19 @@
-name: CI - Build and Lint Check
+name: CI
 
-# Run on pull requests to main branch
 on:
   pull_request:
-    branches:
-      - main
+    branches: [ dev, staging, main ]
 
 jobs:
-  build-and-lint:
+  build:
     runs-on: ubuntu-latest
-    
+
     steps:
-      # 1. Checkout the code
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      # 2. Set up Node.js
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'  # Cache npm dependencies for faster builds
-
-      # 3. Install dependencies
-      - name: Install dependencies
-        run: npm ci
-
-      # 4. Run ESLint (commented out - fix lint errors first, then uncomment)
-      #    This catches unused imports, undefined variables, and code quality issues
-      # - name: Run ESLint
-      #   run: npm run lint
-
-      # 5. Build the application
-      #    This is the most important step - Vite will fail if there are:
-      #    - Missing imports
-      #    - Undefined variables or functions
-      #    - Syntax errors
-      #    - Module resolution errors
-      - name: Build application
-        run: npm run build
-        env:
-          # Add any environment variables needed for build
-          NODE_ENV: production
-
-      # 6. Check build output exists
-      - name: Verify build output
-        run: |
-          if [ ! -d "dist" ]; then
-            echo "Build failed: dist directory not found"
-            exit 1
-          fi
-          echo "Build successful: dist directory created"
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run build
