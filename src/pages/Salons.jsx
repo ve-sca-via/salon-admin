@@ -11,11 +11,50 @@ import { Button } from '../components/common/Button';
 import { Badge } from '../components/common/Badge';
 import { Dropdown, DropdownItem, DropdownDivider, DropdownTrigger } from '../components/common/Dropdown';
 import { toast } from 'react-toastify';
+import axios from 'axios';
 import { 
   CheckCircle, XCircle, AlertCircle, Star, 
   MapPin, Phone, Mail, User, Users, Eye, 
-  Power, Shield, TrendingUp, Calendar, Search, Filter, Send
+  Power, Shield, TrendingUp, Calendar, Search, Filter, Send, FileText
 } from 'lucide-react';
+
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
+const FRONTEND_URL = import.meta.env.VITE_FRONTEND_URL || 'http://localhost:3000';
+
+// Helper function to extract storage path from URL or return path as-is
+const extractStoragePath = (urlOrPath) => {
+  if (!urlOrPath) return null;
+  
+  // If it's already a path (doesn't start with http), return as-is
+  if (!urlOrPath.startsWith('http')) {
+    return urlOrPath;
+  }
+  
+  // Extract path from URL
+  try {
+    const url = new URL(urlOrPath);
+    const pathParts = url.pathname.split('/');
+    const bucketIndex = pathParts.findIndex(part => part === 'salon-agreement');
+    if (bucketIndex !== -1) {
+      return pathParts.slice(bucketIndex + 1).join('/');
+    }
+  } catch (e) {
+    console.error('Failed to parse URL:', e);
+  }
+  
+  return urlOrPath;
+};
+
+// Helper function to get signed URL for agreement document
+const getAgreementDocumentSignedUrl = async (pathOrUrl) => {
+  const path = extractStoragePath(pathOrUrl);
+  const token = localStorage.getItem('access_token');
+  const response = await axios.get(`${BACKEND_URL}/api/v1/upload/agreement-document/signed-url`, {
+    params: { path },
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  return response.data.signedUrl;
+};
 
 const Salons = () => {
   // State
@@ -375,73 +414,199 @@ const Salons = () => {
         isOpen={isDetailModalOpen}
         onClose={() => setIsDetailModalOpen(false)}
         title="Salon Details"
+        size="xl"
       >
         {selectedSalon && (
           <div className="space-y-6">
-            {/* Business Info */}
+            {/* Basic Information */}
             <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Business Information</h3>
-              <div className="grid grid-cols-2 gap-4 text-sm">
+              <h3 className="text-lg font-semibold text-gray-900 mb-3">Basic Information</h3>
+              <div className="grid grid-cols-2 gap-4 bg-gray-50 p-4 rounded-lg">
                 <div>
-                  <span className="text-gray-600">Business Name:</span>
-                  <p className="font-medium text-gray-900">{selectedSalon.business_name}</p>
+                  <p className="text-sm text-gray-600">Business Name</p>
+                  <p className="font-medium">{selectedSalon.business_name}</p>
                 </div>
                 <div>
-                  <span className="text-gray-600">Business Type:</span>
-                  <p className="font-medium text-gray-900">{selectedSalon.business_type || 'N/A'}</p>
+                  <p className="text-sm text-gray-600">Business Type</p>
+                  <p className="font-medium capitalize">{selectedSalon.business_type?.replace(/_/g, ' ') || 'N/A'}</p>
                 </div>
                 <div>
-                  <span className="text-gray-600">Email:</span>
-                  <p className="font-medium text-gray-900">{selectedSalon.email}</p>
+                  <p className="text-sm text-gray-600">Owner Name</p>
+                  <p className="font-medium">{selectedSalon.owner_name || selectedSalon.profiles?.full_name || 'N/A'}</p>
                 </div>
                 <div>
-                  <span className="text-gray-600">Phone:</span>
-                  <p className="font-medium text-gray-900">{selectedSalon.phone}</p>
+                  <p className="text-sm text-gray-600">Owner Email</p>
+                  <p className="font-medium">{selectedSalon.owner_email || selectedSalon.email}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Owner Phone</p>
+                  <p className="font-medium">{selectedSalon.owner_phone || selectedSalon.phone}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Location</p>
+                  <p className="font-medium">{selectedSalon.city}, {selectedSalon.state} {selectedSalon.pincode}</p>
+                </div>
+                {selectedSalon.latitude && selectedSalon.longitude && (
+                  <div className="col-span-2">
+                    <p className="text-sm text-gray-600">Coordinates</p>
+                    <p className="font-medium text-xs flex items-center gap-2">
+                      <span>📍 {selectedSalon.latitude.toFixed(6)}, {selectedSalon.longitude.toFixed(6)}</span>
+                      <a 
+                        href={`https://www.google.com/maps?q=${selectedSalon.latitude},${selectedSalon.longitude}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:underline"
+                      >
+                        View on Map →
+                      </a>
+                    </p>
+                  </div>
+                )}
+                <div className="col-span-2">
+                  <p className="text-sm text-gray-600">Address</p>
+                  <p className="font-medium">
+                    {selectedSalon.address_line1 && `${selectedSalon.address_line1}, `}
+                    {selectedSalon.address_line2 && `${selectedSalon.address_line2}, `}
+                    {selectedSalon.business_address || `${selectedSalon.city}, ${selectedSalon.state} ${selectedSalon.pincode}`}
+                  </p>
                 </div>
               </div>
             </div>
 
-            {/* Address */}
+            {/* Legal & Compliance */}
+            {(selectedSalon.gst_number || selectedSalon.pan_number || selectedSalon.business_license) && (
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-3">Legal & Compliance</h3>
+                <div className="grid grid-cols-2 gap-4 bg-green-50 p-4 rounded-lg">
+                  {selectedSalon.gst_number && (
+                    <div>
+                      <p className="text-sm text-gray-600">GST Number</p>
+                      <p className="font-mono font-medium">{selectedSalon.gst_number}</p>
+                    </div>
+                  )}
+                  {selectedSalon.pan_number && (
+                    <div>
+                      <p className="text-sm text-gray-600">PAN Number</p>
+                      <p className="font-mono font-medium">{selectedSalon.pan_number}</p>
+                    </div>
+                  )}
+                  {selectedSalon.business_license && (
+                    <div>
+                      <p className="text-sm text-gray-600 mb-1">Business License</p>
+                      <a 
+                        href={selectedSalon.business_license} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-blue-600 hover:underline text-sm flex items-center gap-1"
+                      >
+                        📄 View Document →
+                      </a>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+            
+            {/* Documents & Links */}
             <div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Location</h3>
-              <p className="text-gray-700">
-                {selectedSalon.address_line1 && `${selectedSalon.address_line1}, `}
-                {selectedSalon.city}, {selectedSalon.state} {selectedSalon.pincode}
-              </p>
-              {selectedSalon.latitude && selectedSalon.longitude && (
-                <p className="text-xs text-gray-500 mt-1">
-                  Coordinates: {selectedSalon.latitude}, {selectedSalon.longitude}
-                </p>
-              )}
+              <h3 className="text-lg font-semibold text-gray-900 mb-3">Documents & Links</h3>
+              <div className={`grid ${selectedSalon.is_active && selectedSalon.is_verified && selectedSalon.registration_fee_paid ? 'grid-cols-2' : 'grid-cols-1'} gap-4 bg-gray-50 p-4 rounded-lg`}>
+                {selectedSalon.agreement_document_url && (
+                  <div>
+                    <p className="text-sm text-gray-600 mb-2">Agreement Document</p>
+                    <button
+                      onClick={async (e) => {
+                        e.preventDefault();
+                        try {
+                          const signedUrl = await getAgreementDocumentSignedUrl(selectedSalon.agreement_document_url);
+                          window.open(signedUrl, '_blank', 'noopener,noreferrer');
+                        } catch (error) {
+                          console.error('Failed to get signed URL:', error);
+                          toast.error('Failed to load agreement document');
+                        }
+                      }}
+                      className="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors cursor-pointer shadow-sm"
+                    >
+                      <FileText className="w-4 h-4" />
+                      View Agreement
+                    </button>
+                  </div>
+                )}
+                {/* Only show Visit Salon if all compliance requirements are met */}
+                {selectedSalon.is_active && selectedSalon.is_verified && selectedSalon.registration_fee_paid && (
+                  <div>
+                    <p className="text-sm text-gray-600 mb-2">Public Salon Page</p>
+                    <a
+                      href={`${FRONTEND_URL}/salons/${selectedSalon.id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 px-5 py-2.5 bg-purple-600 text-white rounded-lg text-sm font-medium hover:bg-purple-700 transition-colors shadow-sm"
+                    >
+                      <Eye className="w-4 h-4" />
+                      Visit Salon
+                    </a>
+                  </div>
+                )}
+              </div>
             </div>
+
+            {/* Business Hours & Schedule */}
+            {selectedSalon.documents?.business_hours && (
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-3">📅 Business Hours</h3>
+                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-4 rounded-lg border border-blue-200">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    {Object.entries(selectedSalon.documents.business_hours)
+                      .filter(([day, hours]) => hours && hours !== 'Closed')
+                      .map(([day, hours]) => (
+                        <div key={day} className="bg-white p-3 rounded-lg shadow-sm border border-blue-100">
+                          <p className="text-xs font-semibold text-gray-500 uppercase mb-1">{day}</p>
+                          <p className="text-sm font-medium text-gray-900">{hours}</p>
+                        </div>
+                      ))}
+                  </div>
+                  {Object.values(selectedSalon.documents.business_hours || {}).some(h => h === 'Closed') && (
+                    <div className="mt-3 pt-3 border-t border-blue-200">
+                      <p className="text-xs text-gray-600">
+                        <span className="font-semibold">Closed:</span> {' '}
+                        {Object.entries(selectedSalon.documents.business_hours)
+                          .filter(([day, hours]) => hours === 'Closed')
+                          .map(([day]) => day)
+                          .join(', ')}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Status Info */}
             <div>
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Status & Compliance</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="flex items-center gap-2">
+              <div className="grid grid-cols-3 gap-4">
+                <div className="flex items-center gap-2 p-3 rounded-lg" style={{backgroundColor: selectedSalon.is_active ? '#f0fdf4' : '#fef2f2'}}>
                   {selectedSalon.is_active ? (
                     <CheckCircle className="w-5 h-5 text-green-500" />
                   ) : (
                     <XCircle className="w-5 h-5 text-red-500" />
                   )}
-                  <span>{selectedSalon.is_active ? 'Active' : 'Inactive'}</span>
+                  <span className="text-sm font-medium">{selectedSalon.is_active ? 'Active' : 'Inactive'}</span>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 p-3 rounded-lg" style={{backgroundColor: selectedSalon.is_verified ? '#f0fdf4' : '#fef9e7'}}>
                   {selectedSalon.is_verified ? (
                     <Shield className="w-5 h-5 text-green-500" />
                   ) : (
                     <AlertCircle className="w-5 h-5 text-yellow-500" />
                   )}
-                  <span>{selectedSalon.is_verified ? 'Verified' : 'Not Verified'}</span>
+                  <span className="text-sm font-medium">{selectedSalon.is_verified ? 'Verified' : 'Not Verified'}</span>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 p-3 rounded-lg" style={{backgroundColor: selectedSalon.registration_fee_paid ? '#f0fdf4' : '#fef2f2'}}>
                   {selectedSalon.registration_fee_paid ? (
                     <CheckCircle className="w-5 h-5 text-green-500" />
                   ) : (
                     <XCircle className="w-5 h-5 text-red-500" />
                   )}
-                  <span>{selectedSalon.registration_fee_paid ? 'Payment Complete' : 'Payment Pending'}</span>
+                  <span className="text-sm font-medium">{selectedSalon.registration_fee_paid ? 'Payment Complete' : 'Payment Pending'}</span>
                 </div>
               </div>
             </div>
