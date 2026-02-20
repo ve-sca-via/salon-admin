@@ -32,8 +32,9 @@ export const Login = () => {
       toast.success('Login successful!');
       navigate('/');
     } catch (error) {
-      toast.error(error.message || 'Failed to login');
-      dispatch(setError(error.message));
+      const errorMessage = error.message || 'Failed to login. Please try again.';
+      toast.error(errorMessage);
+      dispatch(setError(errorMessage));
     } finally {
       setIsLoading(false);
     }

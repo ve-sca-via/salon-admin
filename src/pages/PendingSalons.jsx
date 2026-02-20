@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
+import axios from 'axios';
 import { Table } from '../components/common/Table';
 import { Modal } from '../components/common/Modal';
 import { Card } from '../components/common/Card';
@@ -16,6 +17,43 @@ import {
   salonApi
 } from '../services/api/salonApi';
 import { supabase } from '../config/supabase';
+
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
+
+// Helper function to extract storage path from URL or return path as-is
+const extractStoragePath = (urlOrPath) => {
+  if (!urlOrPath) return null;
+  
+  // If it's already a path (doesn't start with http), return as-is
+  if (!urlOrPath.startsWith('http')) {
+    return urlOrPath;
+  }
+  
+  // Extract path from URL
+  try {
+    const url = new URL(urlOrPath);
+    const pathParts = url.pathname.split('/');
+    const bucketIndex = pathParts.findIndex(part => part === 'salon-agreement');
+    if (bucketIndex !== -1) {
+      return pathParts.slice(bucketIndex + 1).join('/');
+    }
+  } catch (e) {
+    console.error('Failed to parse URL:', e);
+  }
+  
+  return urlOrPath;
+};
+
+// Helper function to get signed URL for agreement document
+const getAgreementDocumentSignedUrl = async (pathOrUrl) => {
+  const path = extractStoragePath(pathOrUrl);
+  const token = localStorage.getItem('access_token');
+  const response = await axios.get(`${BACKEND_URL}/api/v1/upload/agreement-document/signed-url`, {
+    params: { path },
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  return response.data.signedUrl;
+};
 
 export const PendingSalons = () => {
   // RTK Query hooks
@@ -352,202 +390,217 @@ export const PendingSalons = () => {
                       </a>
                     </div>
                   )}
-                  {selectedRequest.registration_certificate && (
-                    <div>
-                      <p className="text-sm text-gray-600 mb-1">Registration Certificate</p>
-                      <a 
-                        href={selectedRequest.registration_certificate} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="text-blue-600 hover:underline text-sm flex items-center gap-1"
-                      >
-                        📄 View Certificate →
-                      </a>
-                    </div>
-                  )}
                 </div>
               </div>
             )}
 
-            {/* Services from documents.services */}
-            {selectedRequest.documents?.services && Array.isArray(selectedRequest.documents.services) && selectedRequest.documents.services.length > 0 && (
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-3">Services Offered</h3>
-                <div className="bg-purple-50 p-4 rounded-lg">
-                  <div className="space-y-2">
-                    {selectedRequest.documents.services.map((service, idx) => (
-                      <div key={idx} className="bg-white p-3 rounded-lg border border-purple-200 flex justify-between items-center">
-                        <div className="flex-1">
-                          <span className="font-medium text-gray-900">{service.name}</span>
-                          {service.description && (
-                            <p className="text-xs text-gray-600 mt-1">{service.description}</p>
-                          )}
-                        </div>
-                        <div className="text-right ml-4">
-                          <p className="font-semibold text-purple-600">₹{service.price}</p>
-                          <p className="text-xs text-gray-500">{service.duration_minutes} min</p>
-                        </div>
+            {/* Agreement Document - Highlighted Section */}
+            {selectedRequest.registration_certificate && (
+              <div className="bg-gradient-to-br from-indigo-50 to-purple-50 p-6 rounded-xl border-2 border-indigo-300 shadow-md">
+                <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                  <span className="bg-indigo-600 text-white w-8 h-8 rounded-full flex items-center justify-center text-lg">📄</span>
+                  Agreement Document
+                </h3>
+                <div className="bg-white p-5 rounded-lg shadow-sm border border-indigo-200">
+                  <div className="flex items-center justify-between flex-wrap gap-4">
+                    <div className="flex items-center gap-4">
+                      <div className="bg-indigo-100 p-3 rounded-xl">
+                        <svg className="w-8 h-8 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
                       </div>
-                    ))}
+                      <div>
+                        <p className="font-semibold text-gray-900 text-base">Salon Agreement Document</p>
+                        <p className="text-sm text-gray-600 mt-1">Review the uploaded agreement document before approval</p>
+                      </div>
+                    </div>
+                    <a 
+                      onClick={async (e) => {
+                        e.preventDefault();
+                        try {
+                          const signedUrl = await getAgreementDocumentSignedUrl(selectedRequest.registration_certificate);
+                          window.open(signedUrl, '_blank', 'noopener,noreferrer');
+                        } catch (error) {
+                          console.error('Failed to get signed URL:', error);
+                        }
+                      }}
+                      className="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition-all shadow-md hover:shadow-lg cursor-pointer"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      </svg>
+                      View Agreement Document
+                    </a>
                   </div>
                 </div>
               </div>
             )}
 
-            {/* Additional Documents */}
-            {selectedRequest.documents && Object.keys(selectedRequest.documents).length > 0 && (
+            {/* Business Hours & Schedule */}
+            {selectedRequest.documents?.business_hours && (
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-3">Additional Information</h3>
-                <div className="bg-gray-100 p-4 rounded-lg space-y-3">
-                  {Object.entries(selectedRequest.documents)
-                    .filter(([key, value]) => {
-                      // Skip services (rendered separately above) and empty values
-                      if (key === 'services') return false;
-                      if (value === null || value === undefined) return false;
-                      if (typeof value === 'string' && !value.trim()) return false;
-                      return true;
-                    })
-                    .map(([key, value]) => (
-                      <div key={key} className="bg-white p-3 rounded border border-gray-200">
-                        <p className="text-sm font-semibold text-gray-700 mb-1 capitalize">
-                          {key.replace(/_/g, ' ')}
-                        </p>
-                        <div className="text-sm text-gray-600">
-                          {typeof value === 'string' && (value.startsWith('http://') || value.startsWith('https://')) ? (
-                            <a 
-                              href={value} 
-                              target="_blank" 
-                              rel="noopener noreferrer"
-                              className="text-blue-600 hover:underline inline-flex items-center gap-1"
-                            >
-                              🔗 View Document →
-                            </a>
-                          ) : typeof value === 'object' && value !== null ? (
-                            <pre className="text-xs bg-gray-50 p-2 rounded overflow-x-auto">
-                              {JSON.stringify(value, null, 2)}
-                            </pre>
-                          ) : (
-                            <p className="break-words">{String(value)}</p>
-                          )}
+                <h3 className="text-lg font-semibold text-gray-900 mb-3">📅 Business Hours</h3>
+                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 p-4 rounded-lg border border-blue-200">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    {Object.entries(selectedRequest.documents.business_hours)
+                      .filter(([day, hours]) => hours && hours !== 'Closed')
+                      .map(([day, hours]) => (
+                        <div key={day} className="bg-white p-3 rounded-lg shadow-sm border border-blue-100">
+                          <p className="text-xs font-semibold text-gray-500 uppercase mb-1">{day}</p>
+                          <p className="text-sm font-medium text-gray-900">{hours}</p>
                         </div>
-                      </div>
-                    ))}
-                  {Object.entries(selectedRequest.documents)
-                    .filter(([key, value]) => {
-                      if (key === 'services') return false;
-                      if (value === null || value === undefined) return false;
-                      if (typeof value === 'string' && !value.trim()) return false;
-                      return true;
-                    }).length === 0 && (
-                    <p className="text-sm text-gray-500 italic">No additional information</p>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Operating Hours */}
-            {(selectedRequest.opening_time || selectedRequest.closing_time || selectedRequest.working_days) && (
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-3">Operating Hours</h3>
-                <div className="bg-blue-50 p-4 rounded-lg">
-                  {(selectedRequest.opening_time || selectedRequest.closing_time) && (
-                    <div className="mb-3">
-                      <p className="text-sm text-gray-600 mb-1">Hours</p>
-                      <p className="font-medium text-lg">
-                        🕒 {selectedRequest.opening_time || 'N/A'} - {selectedRequest.closing_time || 'N/A'}
+                      ))}
+                  </div>
+                  {Object.values(selectedRequest.documents.business_hours || {}).some(h => h === 'Closed') && (
+                    <div className="mt-3 pt-3 border-t border-blue-200">
+                      <p className="text-xs text-gray-600">
+                        <span className="font-semibold">Closed:</span> {' '}
+                        {Object.entries(selectedRequest.documents.business_hours)
+                          .filter(([day, hours]) => hours === 'Closed')
+                          .map(([day]) => day)
+                          .join(', ')}
                       </p>
                     </div>
                   )}
-                  {selectedRequest.working_days && Array.isArray(selectedRequest.working_days) && selectedRequest.working_days.length > 0 && (
-                    <div>
-                      <p className="text-sm text-gray-600 mb-2">Working Days</p>
-                      <div className="flex flex-wrap gap-2">
-                        {selectedRequest.working_days.map((day, idx) => (
-                          <span key={idx} className="px-3 py-1 bg-white border border-blue-200 rounded-full text-sm font-medium">
-                            {day}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
                 </div>
               </div>
             )}
 
-            {/* Photos */}
-            {(selectedRequest.documents?.logo || selectedRequest.cover_image_url || (selectedRequest.gallery_images && selectedRequest.gallery_images.length > 0)) && (
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-3">Photos</h3>
-                <div className="grid grid-cols-3 gap-4">
-                  {/* Logo */}
-                  {selectedRequest.documents?.logo && (
-                    <div className="col-span-1">
-                      <p className="text-sm text-gray-600 mb-2">Logo</p>
-                      <ImageViewer images={selectedRequest.documents.logo}>
-                        <div className="relative group overflow-hidden rounded-lg">
-                          <img 
-                            src={selectedRequest.documents.logo} 
-                            alt="Logo" 
-                            className="w-full h-32 object-contain bg-gray-50 border border-gray-200 p-2 transition-transform group-hover:scale-105" 
-                          />
-                          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                            <div className="bg-black bg-opacity-50 rounded-full p-2">
-                              <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
-                              </svg>
-                            </div>
+            {/* Contact & Submission Status */}
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-3">📋 Additional Details</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Contact Information */}
+                {(selectedRequest.documents?.email || selectedRequest.documents?.phone) && (
+                  <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-4 rounded-lg border border-green-200">
+                    <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                      <span>📞</span> Alternative Contact
+                    </h4>
+                    <div className="space-y-2">
+                      {selectedRequest.documents?.email && (
+                        <div className="flex items-start gap-2">
+                          <span className="text-xs text-gray-500 w-16 pt-0.5">Email:</span>
+                          <a href={`mailto:${selectedRequest.documents.email}`} className="text-sm font-medium text-green-700 hover:underline break-all">
+                            {selectedRequest.documents.email}
+                          </a>
+                        </div>
+                      )}
+                      {selectedRequest.documents?.phone && (
+                        <div className="flex items-start gap-2">
+                          <span className="text-xs text-gray-500 w-16 pt-0.5">Phone:</span>
+                          <a href={`tel:${selectedRequest.documents.phone}`} className="text-sm font-medium text-green-700 hover:underline">
+                            {selectedRequest.documents.phone}
+                          </a>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Other Documents/Fields */}
+                {selectedRequest.documents && Object.entries(selectedRequest.documents)
+                  .filter(([key, value]) => {
+                    // Skip already displayed fields
+                    const skipKeys = ['services', 'business_hours', 'email', 'phone', 'current_step', 'cover_image', 'logo', 'cover_photo', 'images', 'gallery'];
+                    if (skipKeys.includes(key)) return false;
+                    if (value === null || value === undefined) return false;
+                    if (typeof value === 'string' && !value.trim()) return false;
+                    return true;
+                  }).length > 0 && (
+                  <div className="md:col-span-2">
+                    {Object.entries(selectedRequest.documents)
+                      .filter(([key, value]) => {
+                        const skipKeys = ['services', 'business_hours', 'email', 'phone', 'current_step', 'cover_image', 'logo', 'cover_photo', 'images', 'gallery'];
+                        if (skipKeys.includes(key)) return false;
+                        if (value === null || value === undefined) return false;
+                        if (typeof value === 'string' && !value.trim()) return false;
+                        return true;
+                      })
+                      .map(([key, value]) => (
+                        <div key={key} className="bg-gradient-to-br from-gray-50 to-slate-50 p-4 rounded-lg border border-gray-200">
+                          <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                            <span>📝</span> {key.replace(/_/g, ' ').split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+                          </h4>
+                          <div className="bg-white p-4 rounded-lg border border-gray-200">
+                            {typeof value === 'string' && (value.startsWith('http://') || value.startsWith('https://')) ? (
+                              <a 
+                                href={value} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="text-blue-600 hover:underline inline-flex items-center gap-1 text-sm font-medium"
+                              >
+                                🔗 View Document →
+                              </a>
+                            ) : typeof value === 'object' && value !== null ? (
+                              <pre className="text-xs bg-gray-50 p-3 rounded overflow-x-auto max-h-48">
+                                {JSON.stringify(value, null, 2)}
+                              </pre>
+                            ) : (
+                              <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">{String(value)}</p>
+                            )}
                           </div>
                         </div>
-                      </ImageViewer>
-                    </div>
-                  )}
-                  {/* Cover Image */}
-                  {selectedRequest.cover_image_url && (
-                    <div className={selectedRequest.documents?.logo ? "col-span-2" : "col-span-3"}>
-                      <p className="text-sm text-gray-600 mb-2">Cover Image</p>
-                      <ImageViewer images={selectedRequest.cover_image_url}>
-                        <div className="relative group overflow-hidden rounded-lg">
-                          <img 
-                            src={selectedRequest.cover_image_url} 
-                            alt="Cover" 
-                            className="w-full h-48 object-cover transition-transform group-hover:scale-105" 
-                          />
-                          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                            <div className="bg-black bg-opacity-50 rounded-full p-2">
-                              <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
-                              </svg>
-                            </div>
-                          </div>
-                        </div>
-                      </ImageViewer>
-                    </div>
-                  )}
-                  {/* Gallery Images */}
-                  {selectedRequest.gallery_images && Array.isArray(selectedRequest.gallery_images) && selectedRequest.gallery_images.map((img, idx) => (
-                    <div key={idx}>
-                      <p className="text-sm text-gray-600 mb-2">Gallery {idx + 1}</p>
-                      <ImageViewer images={selectedRequest.gallery_images} initialIndex={idx}>
-                        <div className="relative group overflow-hidden rounded-lg">
-                          <img 
-                            src={img} 
-                            alt={`Gallery ${idx + 1}`} 
-                            className="w-full h-32 object-cover transition-transform group-hover:scale-105" 
-                          />
-                          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                            <div className="bg-black bg-opacity-50 rounded-full p-2">
-                              <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
-                              </svg>
-                            </div>
-                          </div>
-                        </div>
-                      </ImageViewer>
-                    </div>
-                  ))}
-                </div>
+                      ))}
+                  </div>
+                )}
               </div>
-            )}
+            </div>
+
+            {/* Photos Gallery */}
+            {(() => {
+              const allImages = [];
+              
+              if (selectedRequest.documents?.logo) {
+                allImages.push({ url: selectedRequest.documents.logo, label: 'Logo', type: 'logo' });
+              }
+              // Use cover_image_url (primary) or fallback to documents.cover_image
+              const coverImage = selectedRequest.cover_image_url || selectedRequest.documents?.cover_image;
+              if (coverImage) {
+                allImages.push({ url: coverImage, label: 'Cover', type: 'cover' });
+              }
+              if (selectedRequest.gallery_images && Array.isArray(selectedRequest.gallery_images)) {
+                selectedRequest.gallery_images.forEach((img, idx) => {
+                  allImages.push({ url: img, label: `Gallery ${idx + 1}`, type: 'gallery' });
+                });
+              }
+              
+              return allImages.length > 0 ? (
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-3">📸 Photos</h3>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    {allImages.map((image, idx) => (
+                      <ImageViewer key={idx} images={allImages.map(img => img.url)} initialIndex={idx}>
+                        <div className="relative group rounded-lg cursor-pointer bg-gray-50 border-2 border-gray-200 hover:border-purple-400 transition-all overflow-hidden">
+                          <div className="relative w-full bg-white" style={{ paddingBottom: '100%' }}>
+                            <img 
+                              src={image.url} 
+                              alt={image.label} 
+                              className={`absolute inset-0 w-full h-full transition-transform group-hover:scale-110 ${
+                                image.type === 'logo' ? 'object-contain p-3' : 'object-cover'
+                              }`}
+                              loading="eager"
+                            />
+                          </div>
+                          <div className="absolute inset-0 bg-transparent group-hover:bg-black group-hover:bg-opacity-40 transition-all flex items-center justify-center pointer-events-none">
+                            <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                              <div className="bg-white rounded-full p-2 shadow-lg">
+                                <svg className="w-5 h-5 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
+                                </svg>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black via-black/50 to-transparent p-2 pointer-events-none">
+                            <p className="text-white text-xs font-medium text-center drop-shadow-lg">{image.label}</p>
+                          </div>
+                        </div>
+                      </ImageViewer>
+                    ))}
+                  </div>
+                </div>
+              ) : null;
+            })()}
 
             {/* Services Offered */}
             {selectedRequest.services_offered && Object.keys(selectedRequest.services_offered).length > 0 && (
