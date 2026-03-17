@@ -322,6 +322,14 @@ export const PendingSalons = () => {
                   <p className="font-medium capitalize">{selectedRequest.business_type?.replace(/_/g, ' ')}</p>
                 </div>
                 <div>
+                  <p className="text-sm text-gray-600">Outlet Type</p>
+                  <p className="font-medium capitalize">{selectedRequest.outlet || 'Not Specified'}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">GST Registered?</p>
+                  <p className="font-medium">{selectedRequest.is_gst ? 'Yes' : 'No'}</p>
+                </div>
+                <div>
                   <p className="text-sm text-gray-600">Owner Name</p>
                   <p className="font-medium">{selectedRequest.owner_name}</p>
                 </div>
