@@ -365,8 +365,10 @@ const ApplicationDetailsModal = ({ application, onClose, onDownload }) => {
             <div className="col-span-2">
               <InfoRow label="Email" value={application.email} />
             </div>
-            <InfoRow label="City" value={application.current_city || 'N/A'} />
-            <InfoRow label="Relocation" value={application.willing_to_relocate ? 'Yes' : 'No'} />
+            <div className="col-span-2 grid grid-cols-2 gap-4">
+              <InfoRow label="City" value={application.current_city || 'N/A'} />
+              <InfoRow label="Relocation" value={application.willing_to_relocate ? 'Yes' : 'No'} />
+            </div>
           </div>
           {application.current_address && (
             <div className="mt-3">
@@ -426,7 +428,6 @@ const ApplicationDetailsModal = ({ application, onClose, onDownload }) => {
             </div>
           </div>
         )}
-
         {/* Cover Letter */}
         {application.cover_letter && (
           <div>
