@@ -12,6 +12,15 @@ export const configApi = createApi({
   baseQuery: axiosBaseQuery(),
   tagTypes: ['SystemConfigs', 'SystemConfig', 'RecentActivity'],
   endpoints: (builder) => ({
+    // Get available predefined config keys
+    getAvailableSystemConfigKeys: builder.query({
+      query: () => ({
+        url: '/api/v1/admin/config/available-keys',
+        method: 'get',
+      }),
+      keepUnusedDataFor: 3600, // Cache for 1 hour (static list)
+    }),
+
     // Get all system configurations
     getSystemConfigs: builder.query({
       query: () => ({
@@ -74,6 +83,7 @@ export const configApi = createApi({
 });
 
 export const {
+  useGetAvailableSystemConfigKeysQuery,
   useGetSystemConfigsQuery,
   useGetSystemConfigQuery,
   useCreateSystemConfigMutation,
