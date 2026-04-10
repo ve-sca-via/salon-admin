@@ -381,10 +381,12 @@ const ApplicationDetailsModal = ({ application, onClose, onDownload }) => {
           <div className="grid grid-cols-3 gap-2">
             {[
               { key: 'resume', label: 'Resume', required: true },
-              { key: 'aadhaar_card', label: 'Aadhaar' },
+              { key: 'aadhaar_card', label: 'Aadhaar', dbKey: 'aadhaar_url' },
               { key: 'photo', label: 'Photo', required: true },
             ].map(doc => {
-              const urlKey = `${doc.key}_url`;
+              // Some DB columns don't follow the `{key}_url` convention
+              // e.g. aadhaar_card is stored as aadhaar_url in the DB
+              const urlKey = doc.dbKey || `${doc.key}_url`;
               const hasDoc = application[urlKey];
               return (
                 <button
