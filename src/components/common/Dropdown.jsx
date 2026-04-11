@@ -8,6 +8,19 @@ export const Dropdown = ({ trigger, children, align = 'right' }) => {
   const triggerRef = useRef(null);
   const dropdownRef = useRef(null);
 
+  const updatePosition = () => {
+    if (!triggerRef.current) return;
+    const rect = triggerRef.current.getBoundingClientRect();
+    const dropdownWidth = 200; // min-w-[200px]
+
+    setPosition({
+      top: rect.bottom + window.scrollY + 4,
+      left: align === 'right'
+        ? rect.right + window.scrollX - dropdownWidth
+        : rect.left + window.scrollX,
+    });
+  };
+
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (
@@ -20,25 +33,25 @@ export const Dropdown = ({ trigger, children, align = 'right' }) => {
       }
     };
 
+    const handleEscape = (event) => {
+      if (event.key === 'Escape') {
+        setIsOpen(false);
+      }
+    };
+
     if (isOpen) {
       document.addEventListener('mousedown', handleClickOutside);
-      
-      // Calculate position
-      if (triggerRef.current) {
-        const rect = triggerRef.current.getBoundingClientRect();
-        const dropdownWidth = 200; // min-w-[200px]
-        
-        setPosition({
-          top: rect.bottom + window.scrollY + 4,
-          left: align === 'right' 
-            ? rect.right + window.scrollX - dropdownWidth
-            : rect.left + window.scrollX
-        });
-      }
+      document.addEventListener('keydown', handleEscape);
+      window.addEventListener('resize', updatePosition);
+      window.addEventListener('scroll', updatePosition, true);
+      updatePosition();
     }
 
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape);
+      window.removeEventListener('resize', updatePosition);
+      window.removeEventListener('scroll', updatePosition, true);
     };
   }, [isOpen, align]);
 
@@ -51,10 +64,15 @@ export const Dropdown = ({ trigger, children, align = 'right' }) => {
       {isOpen && createPortal(
         <div
           ref={dropdownRef}
-          className="fixed z-[9999] min-w-[200px] bg-white rounded-lg shadow-lg border border-gray-200 py-1"
+          className="absolute z-[9999] min-w-[200px] bg-white rounded-lg shadow-lg border border-gray-200 py-1"
           style={{
             top: `${position.top}px`,
             left: `${position.left}px`,
+          }}
+          onClick={(event) => {
+            if (event.target.closest('button[data-dropdown-item="true"]')) {
+              setIsOpen(false);
+            }
           }}
         >
           {children}
@@ -84,6 +102,7 @@ export const DropdownItem = ({
     <button
       onClick={onClick}
       disabled={disabled}
+      data-dropdown-item="true"
       className={`w-full px-4 py-2 text-left text-sm flex items-center gap-3 transition-colors ${
         disabled 
           ? 'text-gray-400 cursor-not-allowed bg-gray-50' 
