@@ -168,12 +168,6 @@ export const CareerApplications = () => {
                   Applicant
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Position
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Experience
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Applied On
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -241,14 +235,6 @@ export const CareerApplications = () => {
                           <div className="text-sm text-gray-500">{application.phone}</div>
                         </div>
                       </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{application.position}</div>
-                      <div className="text-sm text-gray-500">{application.current_city || 'N/A'}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{application.experience_years} years</div>
-                      <div className="text-sm text-gray-500">{application.previous_company || 'N/A'}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {formatDate(application.created_at)}
@@ -365,69 +351,20 @@ const ApplicationDetailsModal = ({ application, onClose, onDownload }) => {
             <div className="col-span-2">
               <InfoRow label="Email" value={application.email} />
             </div>
-            <div className="col-span-2 grid grid-cols-2 gap-4">
-              <InfoRow label="City" value={application.current_city || 'N/A'} />
-              <InfoRow label="Relocation" value={application.willing_to_relocate ? 'Yes' : 'No'} />
-            </div>
-          </div>
-          {application.current_address && (
-            <div className="mt-3">
-              <InfoRow label="Address" value={application.current_address} />
-            </div>
-          )}
-        </div>
-
-        {/* Job Details */}
-        <div>
-          <h4 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3">Position & Experience</h4>
-          <div className="grid grid-cols-2 gap-4 bg-gray-50 p-3 rounded-lg">
-            <div className="col-span-2">
-              <InfoRow label="Position Applied For" value={application.position} />
-            </div>
-            <InfoRow label="Experience" value={`${application.experience_years} years`} />
-            <InfoRow label="Previous Company" value={application.previous_company || 'N/A'} />
-            <InfoRow label="Current Salary" value={application.current_salary ? `₹${application.current_salary.toLocaleString('en-IN')}` : 'N/A'} />
-            <InfoRow label="Expected Salary" value={application.expected_salary ? `₹${application.expected_salary.toLocaleString('en-IN')}` : 'N/A'} />
-            <InfoRow label="Notice Period" value={application.notice_period_days ? `${application.notice_period_days} days` : 'N/A'} />
-          </div>
-        </div>
-
-        {/* Education */}
-        <div>
-          <h4 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3">Education</h4>
-          <div className="grid grid-cols-2 gap-4 bg-gray-50 p-3 rounded-lg">
+            <InfoRow label="Age" value={application.age || 'N/A'} />
             <InfoRow label="Qualification" value={application.highest_qualification || 'N/A'} />
-            <InfoRow label="Graduation Year" value={application.graduation_year || 'N/A'} />
-            <div className="col-span-2">
-              <InfoRow label="University" value={application.university_name || 'N/A'} />
-            </div>
+          </div>
+          <div className="mt-3 space-y-3">
+            {application.permanent_address && (
+              <InfoRow label="Permanent Address" value={application.permanent_address} />
+            )}
+            {application.current_address && (
+              <InfoRow label="Current Address" value={application.current_address} />
+            )}
           </div>
         </div>
 
-        {/* Additional Links */}
-        {(application.linkedin_url || application.portfolio_url) && (
-          <div>
-            <h4 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-3">Online Profiles</h4>
-            <div className="space-y-2">
-              {application.linkedin_url && (
-                <div className="flex items-center justify-between bg-gray-50 p-3 rounded-lg">
-                  <span className="text-sm text-gray-700">LinkedIn</span>
-                  <a href={application.linkedin_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 text-sm font-medium">
-                    View Profile →
-                  </a>
-                </div>
-              )}
-              {application.portfolio_url && (
-                <div className="flex items-center justify-between bg-gray-50 p-3 rounded-lg">
-                  <span className="text-sm text-gray-700">Portfolio</span>
-                  <a href={application.portfolio_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 text-sm font-medium">
-                    View Portfolio →
-                  </a>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
+
         {/* Cover Letter */}
         {application.cover_letter && (
           <div>
@@ -444,14 +381,12 @@ const ApplicationDetailsModal = ({ application, onClose, onDownload }) => {
           <div className="grid grid-cols-3 gap-2">
             {[
               { key: 'resume', label: 'Resume', required: true },
-              { key: 'aadhaar', label: 'Aadhaar' },
-              { key: 'pan', label: 'PAN' },
+              { key: 'aadhaar_card', label: 'Aadhaar', dbKey: 'aadhaar_url' },
               { key: 'photo', label: 'Photo', required: true },
-              { key: 'address_proof', label: 'Address Proof', required: true },
-              { key: 'experience_letter', label: 'Experience Letter' },
-              { key: 'salary_slip', label: 'Salary Slip' },
             ].map(doc => {
-              const urlKey = `${doc.key}_url`;
+              // Some DB columns don't follow the `{key}_url` convention
+              // e.g. aadhaar_card is stored as aadhaar_url in the DB
+              const urlKey = doc.dbKey || `${doc.key}_url`;
               const hasDoc = application[urlKey];
               return (
                 <button
@@ -549,7 +484,7 @@ const UpdateStatusModal = ({ application, onClose, onUpdate, isLoading }) => {
         {/* Applicant Info Header */}
         <div className="bg-blue-50 p-3 rounded-lg border border-blue-200 mb-4">
           <p className="text-sm text-blue-900 font-medium">{application.full_name}</p>
-          <p className="text-xs text-blue-700">{application.position} • {application.email}</p>
+          <p className="text-xs text-blue-700">{application.email}</p>
         </div>
 
         {/* Status Selection */}
