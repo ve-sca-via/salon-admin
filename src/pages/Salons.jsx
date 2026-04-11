@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { 
   useGetAllSalonsQuery, 
+  useUpdateSalonMutation,
   useToggleSalonStatusMutation,
   useSendPaymentReminderMutation
 } from '../services/api/salonApi';
@@ -66,6 +67,7 @@ const Salons = () => {
 
   // RTK Query hooks - NOW FETCHING ALL SALONS
   const { data: salonsData, isLoading } = useGetAllSalonsQuery({});
+  const [updateSalon] = useUpdateSalonMutation();
   const [toggleStatus] = useToggleSalonStatusMutation();
   const [sendPaymentReminder] = useSendPaymentReminderMutation();
   
