@@ -538,7 +538,7 @@ export const PendingSalons = () => {
                 {selectedRequest.documents && Object.entries(selectedRequest.documents)
                   .filter(([key, value]) => {
                     // Skip already displayed fields
-                    const skipKeys = ['services', 'business_hours', 'email', 'phone', 'current_step', 'cover_image', 'logo', 'cover_photo', 'images', 'gallery'];
+                    const skipKeys = ['services', 'business_hours', 'email', 'phone', 'current_step', 'cover_image', 'logo', 'cover_photo', 'images', 'gallery', 'facilities', 'business_name', 'business_type', 'owner_name', 'owner_email', 'owner_phone', 'city', 'state', 'pincode', 'latitude', 'longitude', 'business_address', 'gst_number', 'pan_number', 'business_license', 'registration_certificate', 'services_offered', 'outlet', 'is_gst', 'agreement_document', 'quick_add_services'];
                     if (skipKeys.includes(key)) return false;
                     if (value === null || value === undefined) return false;
                     if (typeof value === 'string' && !value.trim()) return false;
@@ -547,7 +547,7 @@ export const PendingSalons = () => {
                   <div className="md:col-span-2">
                     {Object.entries(selectedRequest.documents)
                       .filter(([key, value]) => {
-                        const skipKeys = ['services', 'business_hours', 'email', 'phone', 'current_step', 'cover_image', 'logo', 'cover_photo', 'images', 'gallery'];
+                        const skipKeys = ['services', 'business_hours', 'email', 'phone', 'current_step', 'cover_image', 'logo', 'cover_photo', 'images', 'gallery', 'facilities', 'business_name', 'business_type', 'owner_name', 'owner_email', 'owner_phone', 'city', 'state', 'pincode', 'latitude', 'longitude', 'business_address', 'gst_number', 'pan_number', 'business_license', 'registration_certificate', 'services_offered', 'outlet', 'is_gst', 'agreement_document', 'quick_add_services'];
                         if (skipKeys.includes(key)) return false;
                         if (value === null || value === undefined) return false;
                         if (typeof value === 'string' && !value.trim()) return false;
