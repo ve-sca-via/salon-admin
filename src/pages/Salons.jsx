@@ -582,6 +582,34 @@ const Salons = () => {
               </div>
             )}
 
+            {/* Facilities */}
+            {(() => {
+              const facilities = selectedSalon.facilities || selectedSalon.documents?.facilities;
+              if (!facilities) return null;
+              
+              const activeFacilities = Object.entries(facilities).filter(([_, isAvailable]) => isAvailable);
+              
+              if (activeFacilities.length === 0) return null;
+              
+              return (
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-3">🛠️ Facilities</h3>
+                  <div className="bg-teal-50 p-4 rounded-lg border border-teal-200">
+                    <div className="flex flex-wrap gap-2 text-sm">
+                      {activeFacilities.map(([key]) => {
+                        const label = key.replace('facility_', '').split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+                        return (
+                          <span key={key} className="bg-white text-teal-800 px-3 py-1 rounded-full border border-teal-300 shadow-sm font-medium">
+                            ✓ {label}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* Status Info */}
             <div>
               <h3 className="text-lg font-semibold text-gray-900 mb-4">Status & Compliance</h3>
