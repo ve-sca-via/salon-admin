@@ -475,6 +475,34 @@ export const PendingSalons = () => {
               </div>
             )}
 
+            {/* Facilities */}
+            {(() => {
+              const facilities = selectedRequest.facilities || selectedRequest.documents?.facilities;
+              if (!facilities) return null;
+              
+              const activeFacilities = Object.entries(facilities).filter(([_, isAvailable]) => isAvailable);
+              
+              if (activeFacilities.length === 0) return null;
+              
+              return (
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-3">🛠️ Facilities</h3>
+                  <div className="bg-teal-50 p-4 rounded-lg border border-teal-200">
+                    <div className="flex flex-wrap gap-2 text-sm">
+                      {activeFacilities.map(([key]) => {
+                        const label = key.replace('facility_', '').split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+                        return (
+                          <span key={key} className="bg-white text-teal-800 px-3 py-1 rounded-full border border-teal-300 shadow-sm font-medium">
+                            ✓ {label}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* Contact & Submission Status */}
             <div>
               <h3 className="text-lg font-semibold text-gray-900 mb-3">📋 Additional Details</h3>
@@ -510,7 +538,7 @@ export const PendingSalons = () => {
                 {selectedRequest.documents && Object.entries(selectedRequest.documents)
                   .filter(([key, value]) => {
                     // Skip already displayed fields
-                    const skipKeys = ['services', 'business_hours', 'email', 'phone', 'current_step', 'cover_image', 'logo', 'cover_photo', 'images', 'gallery'];
+                    const skipKeys = ['services', 'business_hours', 'email', 'phone', 'current_step', 'cover_image', 'logo', 'cover_photo', 'images', 'gallery', 'facilities', 'business_name', 'business_type', 'owner_name', 'owner_email', 'owner_phone', 'city', 'state', 'pincode', 'latitude', 'longitude', 'business_address', 'gst_number', 'pan_number', 'business_license', 'registration_certificate', 'services_offered', 'outlet', 'is_gst', 'agreement_document', 'quick_add_services'];
                     if (skipKeys.includes(key)) return false;
                     if (value === null || value === undefined) return false;
                     if (typeof value === 'string' && !value.trim()) return false;
@@ -519,7 +547,7 @@ export const PendingSalons = () => {
                   <div className="md:col-span-2">
                     {Object.entries(selectedRequest.documents)
                       .filter(([key, value]) => {
-                        const skipKeys = ['services', 'business_hours', 'email', 'phone', 'current_step', 'cover_image', 'logo', 'cover_photo', 'images', 'gallery'];
+                        const skipKeys = ['services', 'business_hours', 'email', 'phone', 'current_step', 'cover_image', 'logo', 'cover_photo', 'images', 'gallery', 'facilities', 'business_name', 'business_type', 'owner_name', 'owner_email', 'owner_phone', 'city', 'state', 'pincode', 'latitude', 'longitude', 'business_address', 'gst_number', 'pan_number', 'business_license', 'registration_certificate', 'services_offered', 'outlet', 'is_gst', 'agreement_document', 'quick_add_services'];
                         if (skipKeys.includes(key)) return false;
                         if (value === null || value === undefined) return false;
                         if (typeof value === 'string' && !value.trim()) return false;
