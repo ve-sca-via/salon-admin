@@ -654,9 +654,18 @@ export const PendingSalons = () => {
                             {Array.isArray(services) && services.map((service, idx) => (
                               <div key={idx} className="flex justify-between items-center">
                                 <div>
-                                  <span className="font-medium text-gray-900">{typeof service === 'object' ? service.name : service}</span>
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-medium text-gray-900">{typeof service === 'object' ? service.name : service}</span>
+                                    {typeof service === 'object' && service.gender_category && service.gender_category !== 'both' && (
+                                      <span className={`px-2 py-0.5 text-[10px] rounded-full uppercase tracking-wider font-semibold ${
+                                        service.gender_category === 'male' ? 'bg-blue-100 text-blue-700' : 'bg-pink-100 text-pink-700'
+                                      }`}>
+                                        {service.gender_category}
+                                      </span>
+                                    )}
+                                  </div>
                                   {typeof service === 'object' && service.description && (
-                                    <p className="text-xs text-gray-600">{service.description}</p>
+                                    <p className="text-xs text-gray-600 mt-1">{service.description}</p>
                                   )}
                                 </div>
                                 {typeof service === 'object' && (
