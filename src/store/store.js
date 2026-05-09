@@ -13,6 +13,7 @@ import { appointmentApi } from '../services/api/appointmentApi';
 import { careerApi } from '../services/api/careerApi';
 import { serviceCategoryApi } from '../services/api/serviceCategoryApi';
 import { configApi } from '../services/api/configApi';
+import { productApi } from '../services/api/productApi';
 
 // Redux Persist Configuration
 const persistConfig = {
@@ -34,6 +35,7 @@ const persistConfig = {
     careerApi.reducerPath,       // 🔴 Contains applicant personal info
     serviceCategoryApi.reducerPath, // Low risk but unnecessary
     salonApi.reducerPath,        // 🔴 Contains salon data - MUST be fresh after mutations
+    productApi.reducerPath,      // Product catalog - must be fresh after mutations
   ],
   // Throttle writes to localStorage (better performance)
   throttle: 1000,
@@ -50,6 +52,7 @@ const rootReducer = combineReducers({
   [careerApi.reducerPath]: careerApi.reducer,
   [serviceCategoryApi.reducerPath]: serviceCategoryApi.reducer,
   [configApi.reducerPath]: configApi.reducer,
+  [productApi.reducerPath]: productApi.reducer,
 });
 
 // Wrap with persistReducer
@@ -77,7 +80,8 @@ export const store = configureStore({
       .concat(appointmentApi.middleware)
       .concat(careerApi.middleware)
       .concat(serviceCategoryApi.middleware)
-      .concat(configApi.middleware),
+      .concat(configApi.middleware)
+      .concat(productApi.middleware),
 });
 
 // Enable refetchOnFocus/refetchOnReconnect behaviors

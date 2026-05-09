@@ -11,6 +11,7 @@ import { appointmentApi } from '../../services/api/appointmentApi';
 import { careerApi } from '../../services/api/careerApi';
 import { serviceCategoryApi } from '../../services/api/serviceCategoryApi';
 import { configApi } from '../../services/api/configApi';
+import { productApi } from '../../services/api/productApi';
 import { useDispatch } from 'react-redux';
 
 export const Sidebar = () => {
@@ -93,6 +94,9 @@ export const Sidebar = () => {
       case '/system-config':
         dispatch(configApi.util.prefetch('getSystemConfigs', undefined, { force: false }));
         break;
+      case '/products':
+        dispatch(productApi.util.prefetch('getAllProducts', {}, { force: false }));
+        break;
       default:
         break;
     }
@@ -172,6 +176,15 @@ export const Sidebar = () => {
         </svg>
       ),
       label: 'Services',
+    },
+    {
+      path: '/products',
+      icon: (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+        </svg>
+      ),
+      label: 'Products',
     },
     {
       path: '/system-config',

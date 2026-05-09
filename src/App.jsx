@@ -24,6 +24,7 @@ const PendingSalons = lazy(() => import('./pages/PendingSalons'));
 const RMManagement = lazy(() => import('./pages/RMManagement').then(module => ({ default: module.RMManagement })));
 const CareerApplications = lazy(() => import('./pages/CareerApplications'));
 const SystemConfig = lazy(() => import('./pages/SystemConfig').then(module => ({ default: module.SystemConfig })));
+const Products = lazy(() => import('./pages/Products'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 
 function AppContent() {
@@ -180,6 +181,11 @@ function AppContent() {
                 <Route path="/system-config" element={
                   <ErrorBoundary fallback="page">
                     <SystemConfig />
+                  </ErrorBoundary>
+                } />
+                <Route path="/products" element={
+                  <ErrorBoundary fallback="page">
+                    <Products />
                   </ErrorBoundary>
                 } />
               </Route>
