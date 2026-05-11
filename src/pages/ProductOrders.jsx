@@ -169,11 +169,22 @@ export const ProductOrders = () => {
               </div>
               <div>
                 <h4 className="text-sm font-medium text-gray-500 uppercase tracking-wider">Shipping Address</h4>
-                <p className="mt-1 text-sm text-gray-600 whitespace-pre-wrap">
-                  {typeof selectedOrder.shipping_address === 'string' 
-                    ? selectedOrder.shipping_address 
-                    : JSON.stringify(selectedOrder.shipping_address, null, 2)}
-                </p>
+                <div className="mt-1 text-sm text-gray-600">
+                  {typeof selectedOrder.shipping_address === 'object' && selectedOrder.shipping_address !== null ? (
+                    <>
+                      <p>{selectedOrder.shipping_address.street || ''}</p>
+                      <p>
+                        {selectedOrder.shipping_address.city || ''}, {selectedOrder.shipping_address.state || ''} {selectedOrder.shipping_address.postal_code || ''}
+                      </p>
+                      <p>{selectedOrder.shipping_address.country || ''}</p>
+                      {selectedOrder.shipping_address.phone && (
+                        <p className="mt-1 text-xs text-gray-500 italic">Contact: {selectedOrder.shipping_address.phone}</p>
+                      )}
+                    </>
+                  ) : (
+                    <p className="whitespace-pre-wrap">{selectedOrder.shipping_address || 'N/A'}</p>
+                  )}
+                </div>
               </div>
             </div>
 
