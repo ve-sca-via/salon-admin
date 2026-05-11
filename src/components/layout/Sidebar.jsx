@@ -12,6 +12,7 @@ import { careerApi } from '../../services/api/careerApi';
 import { serviceCategoryApi } from '../../services/api/serviceCategoryApi';
 import { configApi } from '../../services/api/configApi';
 import { productApi } from '../../services/api/productApi';
+import { productOrderApi } from '../../services/api/productOrderApi';
 import { useDispatch } from 'react-redux';
 
 export const Sidebar = () => {
@@ -96,6 +97,9 @@ export const Sidebar = () => {
         break;
       case '/products':
         dispatch(productApi.util.prefetch('getAllProducts', {}, { force: false }));
+        break;
+      case '/product-orders':
+        dispatch(productOrderApi.util.prefetch('getAllProductOrders', undefined, { force: false }));
         break;
       default:
         break;
@@ -185,6 +189,15 @@ export const Sidebar = () => {
         </svg>
       ),
       label: 'Products',
+    },
+    {
+      path: '/product-orders',
+      icon: (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+        </svg>
+      ),
+      label: 'Product Orders',
     },
     {
       path: '/system-config',
