@@ -45,6 +45,7 @@ const EMPTY_FORM = {
   is_featured: false,
   tags: '',
   weight: '',
+  b2b_price: '',
 };
 
 
@@ -163,6 +164,9 @@ const Products = () => {
     if (form.tags.trim()) {
       payload.tags = form.tags.split(',').map((t) => t.trim()).filter(Boolean);
     }
+    if (form.b2b_price !== '' && form.b2b_price !== null) {
+      payload.b2b_price = parseFloat(form.b2b_price);
+    }
 
     return payload;
   };
@@ -246,6 +250,7 @@ const Products = () => {
       is_featured: product.is_featured ?? false,
       tags: (product.tags || []).join(', '),
       weight: product.weight || '',
+      b2b_price: product.b2b_price ?? '',
     });
     setIsEditModalOpen(true);
   };
@@ -353,6 +358,12 @@ const Products = () => {
           ) : (
             <div className="font-semibold text-gray-900">₹{Number(row.price).toFixed(2)}</div>
           )}
+          {row.b2b_price != null && (
+            <div className="mt-1 flex items-center gap-1">
+              <span className="text-[10px] font-bold bg-blue-50 text-blue-600 px-1 rounded border border-blue-100">B2B</span>
+              <span className="text-xs font-bold text-blue-700">₹{Number(row.b2b_price).toFixed(2)}</span>
+            </div>
+          )}
         </div>
       ),
     },
@@ -457,6 +468,20 @@ const Products = () => {
           />
           {formErrors.discount_price && <p className="text-red-500 text-xs mt-1">{formErrors.discount_price}</p>}
         </div>
+      </div>
+      
+      {/* B2B Price */}
+      <div className="pt-2 border-t border-gray-100">
+        <Input
+          label="B2B / Wholesale Price (₹)"
+          type="number"
+          min="0"
+          step="0.01"
+          value={form.b2b_price}
+          onChange={(e) => updateField('b2b_price', e.target.value)}
+          placeholder="299.00"
+          helperText="Special price shown to Vendors and Regular Buyers"
+        />
       </div>
 
       {/* Category / Brand */}

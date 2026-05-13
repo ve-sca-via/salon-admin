@@ -190,6 +190,18 @@ const Salons = () => {
       )
     },
     {
+      header: 'Type',
+      accessor: 'salon_type',
+      cell: (salon) => (
+        <Badge 
+          variant={salon.salon_type === 'regular_buyer' ? 'info' : 'default'}
+          className="w-fit"
+        >
+          {salon.salon_type === 'regular_buyer' ? 'Regular Buyer' : 'Salon'}
+        </Badge>
+      )
+    },
+    {
       header: 'Status',
       accessor: 'status',
       cell: (salon) => (
