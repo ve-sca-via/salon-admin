@@ -66,7 +66,7 @@ export const ProductOrders = () => {
           regular_buyer: { variant: 'primary', label: 'Regular Buyer' },
           relationship_manager: { variant: 'info', label: 'RM' },
           admin: { variant: 'danger', label: 'Admin' },
-          customer: { variant: 'default', label: 'Customer' },
+          customer: { variant: 'default', label: 'User' },
         };
         
         const config = roleConfig[role] || roleConfig.customer;
@@ -191,7 +191,7 @@ export const ProductOrders = () => {
                       } 
                       size="sm"
                     >
-                      {selectedOrder.profiles.user_role.replace('_', ' ')}
+                      {selectedOrder.profiles.user_role === 'customer' ? 'User' : selectedOrder.profiles.user_role.replace('_', ' ')}
                     </Badge>
                   )}
                 </div>
