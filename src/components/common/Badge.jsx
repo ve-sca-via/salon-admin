@@ -30,6 +30,8 @@ export const StatusBadge = ({ status }) => {
     cancelled: { variant: 'danger', label: 'Cancelled' },
     no_show: { variant: 'default', label: 'No Show' },
     paid: { variant: 'success', label: 'Paid' },
+    shipped: { variant: 'info', label: 'Shipped' },
+    delivered: { variant: 'success', label: 'Delivered' },
     refunded: { variant: 'warning', label: 'Refunded' },
     failed: { variant: 'danger', label: 'Failed' },
     active: { variant: 'success', label: 'Active' },
