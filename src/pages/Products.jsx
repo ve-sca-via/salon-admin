@@ -45,7 +45,8 @@ const EMPTY_FORM = {
   is_featured: false,
   tags: '',
   weight: '',
-  b2b_price: '',
+  b2b_discount_price: '',
+  b2b_discount_percentage: '',
 };
 
 
@@ -164,8 +165,11 @@ const Products = () => {
     if (form.tags.trim()) {
       payload.tags = form.tags.split(',').map((t) => t.trim()).filter(Boolean);
     }
-    if (form.b2b_price !== '' && form.b2b_price !== null) {
-      payload.b2b_price = parseFloat(form.b2b_price);
+    if (form.b2b_discount_price !== '' && form.b2b_discount_price !== null) {
+      payload.b2b_discount_price = parseFloat(form.b2b_discount_price);
+    }
+    if (form.b2b_discount_percentage !== '' && form.b2b_discount_percentage !== null) {
+      payload.b2b_discount_percentage = parseFloat(form.b2b_discount_percentage);
     }
 
     return payload;
@@ -250,7 +254,8 @@ const Products = () => {
       is_featured: product.is_featured ?? false,
       tags: (product.tags || []).join(', '),
       weight: product.weight || '',
-      b2b_price: product.b2b_price ?? '',
+      b2b_discount_price: product.b2b_discount_price ?? '',
+      b2b_discount_percentage: product.b2b_discount_percentage ?? '',
     });
     setIsEditModalOpen(true);
   };
@@ -358,10 +363,10 @@ const Products = () => {
           ) : (
             <div className="font-semibold text-gray-900">₹{Number(row.price).toFixed(2)}</div>
           )}
-          {row.b2b_price != null && (
+          {row.b2b_discount_price != null && (
             <div className="mt-1 flex items-center gap-1">
               <span className="text-[10px] font-bold bg-blue-50 text-blue-600 px-1 rounded border border-blue-100">B2B</span>
-              <span className="text-xs font-bold text-blue-700">₹{Number(row.b2b_price).toFixed(2)}</span>
+              <span className="text-xs font-bold text-blue-700">₹{Number(row.b2b_discount_price).toFixed(2)}</span>
             </div>
           )}
         </div>
@@ -477,8 +482,8 @@ const Products = () => {
           type="number"
           min="0"
           step="0.01"
-          value={form.b2b_price}
-          onChange={(e) => updateField('b2b_price', e.target.value)}
+          value={form.b2b_discount_price}
+          onChange={(e) => updateField('b2b_discount_price', e.target.value)}
           placeholder="299.00"
           helperText="Special price shown to Vendors and Regular Buyers"
         />

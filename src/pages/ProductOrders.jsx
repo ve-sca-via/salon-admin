@@ -8,7 +8,7 @@ import { Button } from '../components/common/Button';
 import { Input, Select } from '../components/common/FormElements';
 import { Table } from '../components/common/Table';
 import { Modal } from '../components/common/Modal';
-import { StatusBadge } from '../components/common/Badge';
+import { Badge, StatusBadge } from '../components/common/Badge';
 import { format } from 'date-fns';
 import { toast } from 'react-toastify';
 
@@ -59,14 +59,29 @@ export const ProductOrders = () => {
       header: 'Customer',
       cell: (row) => {
         const profile = row.profiles || {};
+        const role = profile.user_role || 'customer';
+        
+        const roleConfig = {
+          vendor: { variant: 'success', label: 'Vendor' },
+          regular_buyer: { variant: 'primary', label: 'Regular Buyer' },
+          relationship_manager: { variant: 'info', label: 'RM' },
+          admin: { variant: 'danger', label: 'Admin' },
+          customer: { variant: 'default', label: 'Customer' },
+        };
+        
+        const config = roleConfig[role] || roleConfig.customer;
+
         return (
-          <div>
-            <div className="font-medium text-gray-900">
-              {profile.full_name || 'N/A'}
+          <div className="flex items-center gap-3">
+            <div className="flex-1 min-w-0">
+              <div className="font-medium text-gray-900 truncate">
+                {profile.full_name || 'N/A'}
+              </div>
+              <div className="text-sm text-gray-500">
+                {profile.phone || 'N/A'}
+              </div>
             </div>
-            <div className="text-sm text-gray-500">
-              {profile.phone || 'N/A'}
-            </div>
+            <Badge variant={config.variant} size="sm">{config.label}</Badge>
           </div>
         );
       },
@@ -164,7 +179,22 @@ export const ProductOrders = () => {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <h4 className="text-sm font-medium text-gray-500 uppercase tracking-wider">Customer Info</h4>
-                <p className="mt-1 text-sm font-semibold">{selectedOrder.profiles?.full_name}</p>
+                <div className="flex items-center gap-2 mt-1">
+                  <p className="text-sm font-semibold">{selectedOrder.profiles?.full_name}</p>
+                  {selectedOrder.profiles?.user_role && (
+                    <Badge 
+                      variant={
+                        selectedOrder.profiles.user_role === 'vendor' ? 'success' :
+                        selectedOrder.profiles.user_role === 'regular_buyer' ? 'primary' :
+                        selectedOrder.profiles.user_role === 'relationship_manager' ? 'info' :
+                        selectedOrder.profiles.user_role === 'admin' ? 'danger' : 'default'
+                      } 
+                      size="sm"
+                    >
+                      {selectedOrder.profiles.user_role.replace('_', ' ')}
+                    </Badge>
+                  )}
+                </div>
                 <p className="text-sm text-gray-600">{selectedOrder.profiles?.phone}</p>
               </div>
               <div>
