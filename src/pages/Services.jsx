@@ -11,6 +11,7 @@ import {
   useUpdateSubcategoryMutation,
   useToggleSubcategoryStatusMutation,
   useDeleteSubcategoryMutation,
+  useGetAllSubcategoriesQuery,
 } from '../services/api/serviceCategoryApi';
 import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
