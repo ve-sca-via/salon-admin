@@ -1,7 +1,7 @@
 /**
- * Service Categories Management API - RTK Query
+ * Service Categories & Subcategories Management API - RTK Query
  * 
- * Handles service category CRUD operations for admin
+ * Handles service category and subcategory CRUD operations for admin
  */
 
 import { createApi } from '@reduxjs/toolkit/query/react';
@@ -10,8 +10,12 @@ import axiosBaseQuery from './baseQuery';
 export const serviceCategoryApi = createApi({
   reducerPath: 'serviceCategoryApi',
   baseQuery: axiosBaseQuery(),
-  tagTypes: ['ServiceCategories', 'ServiceCategory'],
+  tagTypes: ['ServiceCategories', 'ServiceCategory', 'Subcategories'],
   endpoints: (builder) => ({
+    // =====================================================
+    // PARENT CATEGORIES (Category 1)
+    // =====================================================
+
     // Get all service categories
     getAllServiceCategories: builder.query({
       query: ({ limit = 50, offset = 0, is_active } = {}) => ({
@@ -99,10 +103,94 @@ export const serviceCategoryApi = createApi({
         };
       },
     }),
+
+    // =====================================================
+    // SUBCATEGORIES (Category 2)
+    // =====================================================
+
+    // Get subcategories for a parent category
+    getSubcategoriesByCategory: builder.query({
+      query: ({ categoryId, is_active } = {}) => ({
+        url: `/api/v1/admin/service-categories/${categoryId}/subcategories`,
+        method: 'get',
+        params: is_active !== undefined ? { is_active } : {},
+      }),
+      providesTags: (result, error, { categoryId }) =>
+        result?.data
+          ? [
+              ...result.data.map(({ id }) => ({ type: 'Subcategories', id })),
+              { type: 'Subcategories', id: `PARENT_${categoryId}` },
+            ]
+          : [{ type: 'Subcategories', id: `PARENT_${categoryId}` }],
+      keepUnusedDataFor: 300,
+    }),
+
+    // Create subcategory under a parent category
+    createSubcategory: builder.mutation({
+      query: ({ categoryId, data }) => ({
+        url: `/api/v1/admin/service-categories/${categoryId}/subcategories`,
+        method: 'post',
+        data,
+      }),
+      invalidatesTags: (result, error, { categoryId }) => [
+        { type: 'Subcategories', id: `PARENT_${categoryId}` },
+        { type: 'ServiceCategories', id: 'LIST' },
+      ],
+    }),
+
+    // Update subcategory
+    updateSubcategory: builder.mutation({
+      query: ({ subcategoryId, data }) => ({
+        url: `/api/v1/admin/service-categories/subcategories/${subcategoryId}`,
+        method: 'put',
+        data,
+      }),
+      invalidatesTags: (result) => [
+        { type: 'Subcategories', id: result?.data?.id },
+        { type: 'Subcategories', id: `PARENT_${result?.data?.parent_category_id}` },
+        { type: 'ServiceCategories', id: 'LIST' },
+      ],
+    }),
+
+    // Toggle subcategory active status
+    toggleSubcategoryStatus: builder.mutation({
+      query: ({ subcategoryId, is_active }) => ({
+        url: `/api/v1/admin/service-categories/subcategories/${subcategoryId}/toggle-status`,
+        method: 'patch',
+        data: { is_active },
+      }),
+      invalidatesTags: (result) => [
+        { type: 'Subcategories', id: result?.data?.id },
+        { type: 'Subcategories', id: `PARENT_${result?.data?.parent_category_id}` },
+      ],
+    }),
+
+    // Delete subcategory
+    deleteSubcategory: builder.mutation({
+      query: (subcategoryId) => ({
+        url: `/api/v1/admin/service-categories/subcategories/${subcategoryId}`,
+        method: 'delete',
+      }),
+      invalidatesTags: [
+        { type: 'Subcategories', id: 'LIST' },
+        { type: 'ServiceCategories', id: 'LIST' },
+      ],
+    }),
+
+    // Get all subcategories (admin overview)
+    getAllSubcategories: builder.query({
+      query: () => ({
+        url: '/api/v1/admin/service-categories/all-subcategories',
+        method: 'get',
+      }),
+      providesTags: [{ type: 'Subcategories', id: 'LIST' }],
+      keepUnusedDataFor: 300,
+    }),
   }),
 });
 
 export const {
+  // Category hooks
   useGetAllServiceCategoriesQuery,
   useGetServiceCategoryByIdQuery,
   useCreateServiceCategoryMutation,
@@ -110,4 +198,12 @@ export const {
   useToggleServiceCategoryStatusMutation,
   useDeleteServiceCategoryMutation,
   useUploadServiceCategoryIconMutation,
+  // Subcategory hooks
+  useGetSubcategoriesByCategoryQuery,
+  useCreateSubcategoryMutation,
+  useUpdateSubcategoryMutation,
+  useToggleSubcategoryStatusMutation,
+  useDeleteSubcategoryMutation,
+  useGetAllSubcategoriesQuery,
 } = serviceCategoryApi;
+
