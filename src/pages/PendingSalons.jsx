@@ -197,7 +197,14 @@ export const PendingSalons = () => {
       accessorKey: 'business_name',
       cell: (row) => (
         <div>
-          <div className="font-medium text-gray-900">{row.business_name}</div>
+          <div className="flex items-center gap-2">
+            <div className="font-medium text-gray-900">{row.business_name}</div>
+            {row.request_type === 'regular_buyer' && (
+              <span className="px-2 py-0.5 text-[10px] bg-blue-100 text-blue-700 rounded-full font-bold uppercase tracking-wider">
+                Regular Buyer
+              </span>
+            )}
+          </div>
           <div className="text-xs text-gray-500 capitalize">{row.business_type?.replace(/_/g, ' ')}</div>
           <div className="text-sm text-gray-600 mt-1">{row.owner_name}</div>
           <div className="text-xs text-gray-500">{row.owner_email}</div>
@@ -320,6 +327,18 @@ export const PendingSalons = () => {
                 <div>
                   <p className="text-sm text-gray-600">Business Type</p>
                   <p className="font-medium capitalize">{selectedRequest.business_type?.replace(/_/g, ' ')}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-gray-600">Request Type</p>
+                  <p className="font-medium capitalize">
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
+                      selectedRequest.request_type === 'regular_buyer' 
+                        ? 'bg-blue-100 text-blue-700' 
+                        : 'bg-purple-100 text-purple-700'
+                    }`}>
+                      {selectedRequest.request_type === 'regular_buyer' ? 'Regular Buyer' : 'Salon'}
+                    </span>
+                  </p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-600">Outlet Type</p>
@@ -765,7 +784,7 @@ export const PendingSalons = () => {
                 onClick={handleApprove}
                 disabled={processing}
               >
-                {processing ? 'Approving...' : 'Approve Salon'}
+                {processing ? 'Approving...' : (selectedRequest.request_type === 'regular_buyer' ? 'Approve Buyer' : 'Approve Salon')}
               </Button>
             </div>
           </div>
