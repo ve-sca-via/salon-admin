@@ -4,6 +4,7 @@
  */
 
 import axios from 'axios';
+import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
 
@@ -209,10 +210,19 @@ const axiosBaseQuery =
         status = 'FETCH_ERROR';
       }
       
+      const rawData = err.response?.data ?? err.message;
+      const message = getApiErrorMessage({ status, data: rawData }, 'An error occurred');
+      const data =
+        rawData && typeof rawData === 'object' && !Array.isArray(rawData)
+          ? { ...rawData, detail: message }
+          : typeof rawData === 'string'
+            ? { detail: message }
+            : { detail: message };
+
       return {
         error: {
           status: status,
-          data: err.response?.data || err.message,
+          data,
         },
       };
     }

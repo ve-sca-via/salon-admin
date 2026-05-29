@@ -7,6 +7,7 @@
  */
 
 import axios from 'axios';
+import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
 
@@ -32,19 +33,21 @@ export const login = async (email, password) => {
 
     return response.data;
   } catch (error) {
-    // Extract error message from response
-    let message = 'Login failed. Please try again.';
-    
-    if (error.response?.data?.detail) {
-      message = error.response.data.detail;
-    } else if (error.response?.status === 401) {
-      message = 'Invalid email or password. Please check your credentials.';
-    } else if (error.response?.status === 403) {
-      message = 'Access denied. Please contact support.';
-    } else if (!error.response) {
-      message = 'Unable to connect to server. Please check your internet connection.';
+    let message = getApiErrorMessage(
+      { status: error.response?.status, data: error.response?.data },
+      'Login failed. Please try again.'
+    );
+
+    if (message === 'Login failed. Please try again.') {
+      if (error.response?.status === 401) {
+        message = 'Invalid email or password. Please check your credentials.';
+      } else if (error.response?.status === 403) {
+        message = 'Access denied. Please contact support.';
+      } else if (!error.response) {
+        message = 'Unable to connect to server. Please check your internet connection.';
+      }
     }
-    
+
     throw new Error(message);
   }
 };
@@ -100,7 +103,10 @@ export const getCurrentUser = async () => {
 
     return { user };
   } catch (error) {
-    const message = error.response?.data?.detail || error.message || 'Failed to get user';
+    const message = getApiErrorMessage(
+      { status: error.response?.status, data: error.response?.data },
+      'Failed to get user'
+    );
     throw new Error(message);
   }
 };
@@ -133,7 +139,10 @@ export const refreshToken = async () => {
     localStorage.removeItem('refresh_token');
     localStorage.removeItem('user');
     
-    const message = error.response?.data?.detail || error.message || 'Token refresh failed';
+    const message = getApiErrorMessage(
+      { status: error.response?.status, data: error.response?.data },
+      'Token refresh failed'
+    );
     throw new Error(message);
   }
 };
