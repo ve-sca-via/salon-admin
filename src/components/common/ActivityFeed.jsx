@@ -66,6 +66,16 @@ const ActivityIcon = ({ action }) => {
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
       </svg>
     ),
+    booking_cancellation: (
+      <svg className="w-5 h-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+      </svg>
+    ),
+    booking_cancelled: (
+      <svg className="w-5 h-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+      </svg>
+    ),
     email_sent: (
       <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
@@ -144,6 +154,9 @@ const getActivityDescription = (activity) => {
     case 'career_application_status_updated':
       return `Updated career application for ${details?.applicant_name || 'Unknown'} to "${details?.new_status?.replace(/_/g, ' ') || 'unknown status'}"`;
     
+    case 'booking_cancelled':
+      return `Booking cancelled: ${details?.booking_number || 'Unknown'} at ${details?.salon_name || 'salon'} by ${details?.customer_name || 'customer'}`;
+
     case 'email_sent':
       const emailTypeMap = {
         vendor_approval: 'Vendor Approval',
@@ -151,8 +164,9 @@ const getActivityDescription = (activity) => {
         rm_notification: 'RM Notification',
         booking_confirmation: 'Booking Confirmation',
         booking_confirmation_customer: 'Booking Confirmation',
-        booking_notification_vendor: 'Booking Notification',
         booking_cancellation: 'Booking Cancellation',
+        booking_cancellation_vendor: 'Booking Cancellation (Vendor)',
+        booking_notification_vendor: 'Booking Notification',
         payment_receipt: 'Payment Receipt',
         welcome_vendor: 'Welcome Email',
         career_application_confirmation: 'Application Confirmation'
