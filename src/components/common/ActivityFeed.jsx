@@ -1,5 +1,8 @@
 import { formatDistanceToNow } from 'date-fns';
 
+/** Activity actions hidden from the admin dashboard recent-activity feed */
+const HIDDEN_DASHBOARD_ACTIONS = new Set(['phone_login', 'email_login']);
+
 /**
  * Activity icon based on action type
  */
@@ -221,6 +224,10 @@ export const ActivityItem = ({ activity }) => {
  * Activity Feed Component
  */
 export const ActivityFeed = ({ activities, isLoading, error }) => {
+  const visibleActivities = (activities || []).filter(
+    (activity) => !HIDDEN_DASHBOARD_ACTIONS.has(activity.action)
+  );
+
   if (error) {
     return (
       <div className="text-center py-8 text-red-600">
@@ -229,7 +236,7 @@ export const ActivityFeed = ({ activities, isLoading, error }) => {
     );
   }
 
-  if (isLoading && !activities?.length) {
+  if (isLoading && !visibleActivities.length) {
     return (
       <div className="space-y-3">
         {[...Array(5)].map((_, i) => (
@@ -245,7 +252,7 @@ export const ActivityFeed = ({ activities, isLoading, error }) => {
     );
   }
 
-  if (!activities || activities.length === 0) {
+  if (!visibleActivities.length) {
     return (
       <div className="text-center py-8 text-gray-500">
         <svg className="mx-auto w-12 h-12 text-gray-400 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -258,7 +265,7 @@ export const ActivityFeed = ({ activities, isLoading, error }) => {
 
   return (
     <div className="space-y-3 max-h-[400px] overflow-y-auto">
-      {activities.map((activity) => (
+      {visibleActivities.map((activity) => (
         <ActivityItem key={activity.id} activity={activity} />
       ))}
     </div>
