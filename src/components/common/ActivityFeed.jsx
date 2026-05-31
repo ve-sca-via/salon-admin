@@ -1,5 +1,8 @@
 import { formatDistanceToNow } from 'date-fns';
 
+/** Activity actions hidden from the admin dashboard recent-activity feed */
+const HIDDEN_DASHBOARD_ACTIONS = new Set(['phone_login', 'email_login']);
+
 /**
  * Activity icon based on action type
  */
@@ -64,6 +67,16 @@ const ActivityIcon = ({ action }) => {
     career_application_status_updated: (
       <svg className="w-5 h-5 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+      </svg>
+    ),
+    booking_cancellation: (
+      <svg className="w-5 h-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+      </svg>
+    ),
+    booking_cancelled: (
+      <svg className="w-5 h-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
       </svg>
     ),
     email_sent: (
@@ -144,6 +157,9 @@ const getActivityDescription = (activity) => {
     case 'career_application_status_updated':
       return `Updated career application for ${details?.applicant_name || 'Unknown'} to "${details?.new_status?.replace(/_/g, ' ') || 'unknown status'}"`;
     
+    case 'booking_cancelled':
+      return `Booking cancelled: ${details?.booking_number || 'Unknown'} at ${details?.salon_name || 'salon'} by ${details?.customer_name || 'customer'}`;
+
     case 'email_sent':
       const emailTypeMap = {
         vendor_approval: 'Vendor Approval',
@@ -151,8 +167,9 @@ const getActivityDescription = (activity) => {
         rm_notification: 'RM Notification',
         booking_confirmation: 'Booking Confirmation',
         booking_confirmation_customer: 'Booking Confirmation',
-        booking_notification_vendor: 'Booking Notification',
         booking_cancellation: 'Booking Cancellation',
+        booking_cancellation_vendor: 'Booking Cancellation (Vendor)',
+        booking_notification_vendor: 'Booking Notification',
         payment_receipt: 'Payment Receipt',
         welcome_vendor: 'Welcome Email',
         career_application_confirmation: 'Application Confirmation'
@@ -207,6 +224,10 @@ export const ActivityItem = ({ activity }) => {
  * Activity Feed Component
  */
 export const ActivityFeed = ({ activities, isLoading, error }) => {
+  const visibleActivities = (activities || []).filter(
+    (activity) => !HIDDEN_DASHBOARD_ACTIONS.has(activity.action)
+  );
+
   if (error) {
     return (
       <div className="text-center py-8 text-red-600">
@@ -215,7 +236,7 @@ export const ActivityFeed = ({ activities, isLoading, error }) => {
     );
   }
 
-  if (isLoading && !activities?.length) {
+  if (isLoading && !visibleActivities.length) {
     return (
       <div className="space-y-3">
         {[...Array(5)].map((_, i) => (
@@ -231,7 +252,7 @@ export const ActivityFeed = ({ activities, isLoading, error }) => {
     );
   }
 
-  if (!activities || activities.length === 0) {
+  if (!visibleActivities.length) {
     return (
       <div className="text-center py-8 text-gray-500">
         <svg className="mx-auto w-12 h-12 text-gray-400 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -244,7 +265,7 @@ export const ActivityFeed = ({ activities, isLoading, error }) => {
 
   return (
     <div className="space-y-3 max-h-[400px] overflow-y-auto">
-      {activities.map((activity) => (
+      {visibleActivities.map((activity) => (
         <ActivityItem key={activity.id} activity={activity} />
       ))}
     </div>
