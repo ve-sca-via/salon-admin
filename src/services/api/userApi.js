@@ -14,10 +14,16 @@ export const userApi = createApi({
   endpoints: (builder) => ({
     // Get all users
     getAllUsers: builder.query({
-      query: ({ role, limit = 50, page = 1 , is_active = true } = {}) => ({
+      query: ({ role, limit = 20, page = 1, search, is_active } = {}) => ({
         url: '/api/v1/admin/users/',
         method: 'get',
-        params: { role, limit, page , is_active},
+        params: {
+          limit,
+          page,
+          ...(role && { role }),
+          ...(search?.trim() && { search: search.trim() }),
+          ...(is_active !== undefined && { is_active }),
+        },
       }),
       providesTags: (result) =>
         result?.data
@@ -27,7 +33,8 @@ export const userApi = createApi({
             ]
           : [{ type: 'Users', id: 'LIST' }],
       keepUnusedDataFor: 300, // Cache for 5 minutes
-      refetchOnReconnect: true, // Refetch on reconnection
+      refetchOnReconnect: true,
+      refetchOnMountOrArgChange: true,
     }),
 
     // Get single user
@@ -134,33 +141,6 @@ export const userApi = createApi({
         method: 'put',
         data,
       }),
-      // Optimistic update for instant UI feedback
-      async onQueryStarted({ rmId, data }, { dispatch, queryFulfilled }) {
-        const patchResult = dispatch(
-          userApi.util.updateQueryData('getAllRMs', {}, (draft) => {
-            const rm = draft?.data?.find(r => r.id === rmId) || draft?.find(r => r.id === rmId);
-            if (rm) {
-              // Update profile fields
-              if (rm.profiles) {
-                if (data.full_name) rm.profiles.full_name = data.full_name;
-                if (data.phone) rm.profiles.phone = data.phone;
-                if (data.email) rm.profiles.email = data.email;
-                if (data.is_active !== undefined) rm.profiles.is_active = data.is_active;
-              }
-              // Update RM-specific fields
-              if (data.employee_id !== undefined) rm.employee_id = data.employee_id;
-              if (data.assigned_territories) rm.assigned_territories = data.assigned_territories;
-              if (data.joining_date) rm.joining_date = data.joining_date;
-              if (data.manager_notes !== undefined) rm.manager_notes = data.manager_notes;
-            }
-          })
-        );
-        try {
-          await queryFulfilled;
-        } catch {
-          patchResult.undo();
-        }
-      },
       invalidatesTags: ['RMs', { type: 'Users', id: 'LIST' }],
     }),
 

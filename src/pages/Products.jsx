@@ -25,6 +25,8 @@ import { Table } from '../components/common/Table';
 import { Modal } from '../components/common/Modal';
 import { Badge } from '../components/common/Badge';
 import { toast } from 'react-toastify';
+import { usePagination } from '../hooks/usePagination';
+import { buildTablePagination } from '../utils/pagination';
 
 
 // =====================================================
@@ -58,13 +60,19 @@ const Products = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
   const [featuredFilter, setFeaturedFilter] = useState('');
+  const { currentPage, onPageChange, offset, pageSize } = usePagination(
+    searchQuery,
+    categoryFilter,
+    featuredFilter
+  );
 
   // ---- API Hooks ----
   const { data: productsData, isLoading } = useGetAllProductsQuery({
     category: categoryFilter || undefined,
     is_featured: featuredFilter === '' ? undefined : featuredFilter === 'true',
     search: searchQuery || undefined,
-    limit: 100,
+    limit: pageSize,
+    offset,
   });
   const { data: categoriesData } = useGetProductCategoriesQuery();
   const [createProduct, { isLoading: isCreating }] = useCreateProductMutation();
@@ -74,6 +82,11 @@ const Products = () => {
 
   const products = productsData?.products || [];
   const categories = categoriesData?.categories || [];
+  const tablePagination = buildTablePagination(
+    currentPage,
+    productsData?.total ?? products.length,
+    pageSize
+  );
 
   // ---- Modal / Form State ----
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -704,7 +717,13 @@ const Products = () => {
 
       {/* Table */}
       <Card>
-        <Table columns={columns} data={products} isLoading={isLoading} />
+        <Table
+          columns={columns}
+          data={products}
+          isLoading={isLoading}
+          pagination={tablePagination}
+          onPageChange={onPageChange}
+        />
       </Card>
 
       {/* Create Modal */}
