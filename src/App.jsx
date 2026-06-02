@@ -7,6 +7,15 @@ import 'react-toastify/dist/ReactToastify.css';
 
 import { store, persistor } from './store/store';
 import { setUser, setLoading, logout as logoutAction } from './store/slices/authSlice';
+import { validateSession, refreshToken } from './services/api/authApi';
+import {
+  hasStoredAuth,
+  isInactivityExpired,
+  isJwtExpired,
+  touchActivity,
+  clearAuthStorage,
+  INACTIVITY_TIMEOUT_MS,
+} from './utils/session';
 
 import { MainLayout } from './components/layout/MainLayout';
 import { ProtectedRoute } from './components/layout/ProtectedRoute';
@@ -33,65 +42,96 @@ function AppContent() {
   const { isLoading } = useSelector((state) => state.auth);
 
   useEffect(() => {
-    // Check for existing JWT token
-    const checkSession = () => {
-      try {
-        const token = localStorage.getItem('access_token');
-        const userStr = localStorage.getItem('user');
-        
-        if (token && userStr) {
-          const user = JSON.parse(userStr);
-          dispatch(setUser(user));
-        } else {
-          dispatch(setLoading(false));
-        }
-      } catch (error) {
+    let cancelled = false;
+
+    const initSession = async () => {
+      dispatch(setLoading(true));
+
+      if (!hasStoredAuth()) {
+        dispatch(logoutAction());
         dispatch(setLoading(false));
+        return;
+      }
+
+      const result = await validateSession();
+      if (cancelled) return;
+
+      if (result.valid) {
+        dispatch(setUser(result.user));
+      } else {
+        dispatch(logoutAction());
+        dispatch(setLoading(false));
+        if (result.reason === 'inactivity') {
+          toast.warning('Session expired due to inactivity. Please login again.');
+        }
       }
     };
 
-    checkSession();
+    initSession();
 
-    // Listen for auth logout events from axios interceptor
     const handleAuthLogout = (event) => {
+      clearAuthStorage();
       dispatch(logoutAction());
+      dispatch(setLoading(false));
       toast.error(event.detail || 'Session expired. Please login again.');
-      // Navigation will happen via ProtectedRoute redirect
     };
 
     window.addEventListener('auth:logout', handleAuthLogout);
 
-    // Security: Auto-logout after 30 minutes of inactivity (for shared computers)
-    let inactivityTimer;
-    const INACTIVITY_TIMEOUT = 30 * 60 * 1000; // 30 minutes
-
-    const resetInactivityTimer = () => {
-      clearTimeout(inactivityTimer);
-      inactivityTimer = setTimeout(() => {
-        const token = localStorage.getItem('access_token');
-        if (token) {
-          dispatch(logoutAction());
-          localStorage.removeItem('access_token');
-          localStorage.removeItem('refresh_token');
-          localStorage.removeItem('user');
-          toast.warning('Session expired due to inactivity. Please login again.');
-        }
-      }, INACTIVITY_TIMEOUT);
+    const logoutInactivity = (message) => {
+      if (!hasStoredAuth()) return;
+      clearAuthStorage();
+      dispatch(logoutAction());
+      dispatch(setLoading(false));
+      toast.warning(message);
     };
 
-    // Track user activity
+    let inactivityTimer;
+
+    const resetInactivityTimer = () => {
+      if (!hasStoredAuth()) return;
+      touchActivity();
+      clearTimeout(inactivityTimer);
+      inactivityTimer = setTimeout(() => {
+        logoutInactivity('Session expired due to inactivity. Please login again.');
+      }, INACTIVITY_TIMEOUT_MS);
+    };
+
+    const handleVisibility = async () => {
+      if (document.visibilityState !== 'visible' || !hasStoredAuth()) return;
+
+      if (isInactivityExpired()) {
+        logoutInactivity('Session expired due to inactivity. Please login again.');
+        return;
+      }
+
+      const access = localStorage.getItem('access_token');
+      if (access && isJwtExpired(access)) {
+        try {
+          await refreshToken();
+        } catch {
+          clearAuthStorage();
+          dispatch(logoutAction());
+          dispatch(setLoading(false));
+          toast.error('Session expired. Please login again.');
+        }
+      }
+    };
+
     const activityEvents = ['mousedown', 'keydown', 'scroll', 'touchstart'];
-    activityEvents.forEach(event => {
+    activityEvents.forEach((event) => {
       document.addEventListener(event, resetInactivityTimer);
     });
+    document.addEventListener('visibilitychange', handleVisibility);
 
-    // Start the timer
     resetInactivityTimer();
 
     return () => {
+      cancelled = true;
       window.removeEventListener('auth:logout', handleAuthLogout);
+      document.removeEventListener('visibilitychange', handleVisibility);
       clearTimeout(inactivityTimer);
-      activityEvents.forEach(event => {
+      activityEvents.forEach((event) => {
         document.removeEventListener(event, resetInactivityTimer);
       });
     };

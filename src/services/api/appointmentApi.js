@@ -14,10 +14,16 @@ export const appointmentApi = createApi({
   endpoints: (builder) => ({
     // Get all appointments (admin view)
     getAllAppointments: builder.query({
-      query: ({ status, limit = 50, offset = 0 } = {}) => ({
+      query: ({ status, limit = 20, page = 1, date_from, date_to } = {}) => ({
         url: '/api/v1/admin/bookings',
         method: 'get',
-        params: { status, limit, offset },
+        params: {
+          status,
+          limit,
+          page,
+          ...(date_from && { date_from }),
+          ...(date_to && { date_to }),
+        },
       }),
       providesTags: (result) =>
         result?.data

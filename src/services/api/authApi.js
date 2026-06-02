@@ -8,6 +8,13 @@
 
 import axios from 'axios';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
+import {
+  clearAuthStorage,
+  syncTokenExpiryFromJwt,
+  touchActivity,
+  isInactivityExpired,
+  isJwtExpired,
+} from '../../utils/session';
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
 
@@ -30,6 +37,8 @@ export const login = async (email, password) => {
     localStorage.setItem('access_token', access_token);
     localStorage.setItem('refresh_token', refresh_token);
     localStorage.setItem('user', JSON.stringify(user));
+    syncTokenExpiryFromJwt(access_token, refresh_token);
+    touchActivity();
 
     return response.data;
   } catch (error) {
@@ -73,10 +82,7 @@ export const logout = async () => {
   } catch (error) {
     // Continue with local cleanup even if backend call fails
   } finally {
-    // Always clear local storage
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('refresh_token');
-    localStorage.removeItem('user');
+    clearAuthStorage();
   }
 };
 
@@ -96,9 +102,9 @@ export const getCurrentUser = async () => {
       headers: { Authorization: `Bearer ${token}` },
     });
 
-    const user = response.data;
-    
-    // Update stored user
+    const data = response.data;
+    const user = data?.user ?? data;
+
     localStorage.setItem('user', JSON.stringify(user));
 
     return { user };
@@ -127,22 +133,74 @@ export const refreshToken = async () => {
       refresh_token,
     });
 
-    const { access_token } = response.data;
-    
-    // Update stored token
-    localStorage.setItem('access_token', access_token);
+    const { access_token, refresh_token: newRefreshToken } = response.data;
+    const storedRefresh = newRefreshToken || refresh_token;
 
-    return { access_token };
+    localStorage.setItem('access_token', access_token);
+    if (newRefreshToken) {
+      localStorage.setItem('refresh_token', newRefreshToken);
+    }
+    syncTokenExpiryFromJwt(access_token, storedRefresh);
+    touchActivity();
+
+    return { access_token, refresh_token: storedRefresh };
   } catch (error) {
-    // Refresh failed - clear all tokens
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('refresh_token');
-    localStorage.removeItem('user');
+    clearAuthStorage();
     
     const message = getApiErrorMessage(
       { status: error.response?.status, data: error.response?.data },
       'Token refresh failed'
     );
     throw new Error(message);
+  }
+};
+
+/**
+ * Validate stored session on app load / tab focus.
+ * Enforces inactivity timeout, JWT expiry, and server-side /me check.
+ * @returns {Promise<{ valid: boolean, user?: object, reason?: string }>}
+ */
+export const validateSession = async () => {
+  const accessToken = localStorage.getItem('access_token');
+  const refreshTokenValue = localStorage.getItem('refresh_token');
+
+  if (!accessToken && !refreshTokenValue) {
+    return { valid: false };
+  }
+
+  if (isInactivityExpired()) {
+    clearAuthStorage();
+    return { valid: false, reason: 'inactivity' };
+  }
+
+  if (refreshTokenValue && isJwtExpired(refreshTokenValue, 0)) {
+    clearAuthStorage();
+    return { valid: false, reason: 'refresh_expired' };
+  }
+
+  if (!accessToken || isJwtExpired(accessToken)) {
+    if (!refreshTokenValue) {
+      clearAuthStorage();
+      return { valid: false, reason: 'no_refresh_token' };
+    }
+    try {
+      await refreshToken();
+    } catch {
+      return { valid: false, reason: 'refresh_failed' };
+    }
+  }
+
+  try {
+    const { user } = await getCurrentUser();
+    const role = user?.role ?? user?.user_role;
+    if (role !== 'admin') {
+      clearAuthStorage();
+      return { valid: false, reason: 'not_admin' };
+    }
+    touchActivity();
+    return { valid: true, user: { ...user, role } };
+  } catch {
+    clearAuthStorage();
+    return { valid: false, reason: 'profile_invalid' };
   }
 };

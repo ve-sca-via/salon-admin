@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   useGetCareerApplicationsQuery, 
   useUpdateCareerApplicationMutation,
@@ -9,6 +9,9 @@ import { SkeletonCard } from '../components/common/Skeleton';
 import { Modal } from '../components/common/Modal';
 import { Button } from '../components/common/Button';
 import { toast } from 'react-toastify';
+import { Pagination } from '../components/common/Pagination';
+import { usePagination } from '../hooks/usePagination';
+import { buildTablePagination } from '../utils/pagination';
 
 const STATUS_COLORS = {
   pending: 'bg-yellow-100 text-yellow-800',
@@ -30,18 +33,35 @@ const STATUS_OPTIONS = [
 
 export const CareerApplications = () => {
   const [statusFilter, setStatusFilter] = useState('');
+  const [searchInput, setSearchInput] = useState('');
+  const [search, setSearch] = useState('');
+  const { currentPage, onPageChange, skip, pageSize } = usePagination(statusFilter, search);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setSearch(searchInput.trim()), 300);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
   const [selectedApplication, setSelectedApplication] = useState(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
   
-  const { data, isLoading, refetch } = useGetCareerApplicationsQuery({
-    status: statusFilter || undefined
+  const { currentData, isLoading, isFetching, refetch } = useGetCareerApplicationsQuery({
+    status: statusFilter || undefined,
+    search: search || undefined,
+    skip,
+    limit: pageSize,
   });
   
   const [updateApplication, { isLoading: isUpdating }] = useUpdateCareerApplicationMutation();
   const [getDocumentUrl] = useLazyGetDocumentDownloadUrlQuery();
 
-  const applications = data?.applications || [];
+  const applications = currentData?.applications || [];
+  const tablePagination = buildTablePagination(
+    currentPage,
+    currentData?.total ?? applications.length,
+    pageSize
+  );
+  const listLoading = isLoading || isFetching;
 
   const handleViewDetails = (application) => {
     setSelectedApplication(application);
@@ -82,51 +102,66 @@ export const CareerApplications = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Career Applications</h1>
-          <p className="text-gray-600 mt-1">Manage job applications for RM positions</p>
-        </div>
-        <Button onClick={() => refetch()} variant="secondary">
-          <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-          </svg>
-          Refresh
-        </Button>
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900">Career Applications</h1>
+        <p className="text-gray-600 mt-1">Manage job applications for RM positions</p>
       </div>
 
-      {/* Filters */}
-      <Card>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Filter by Status
-            </label>
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="">All Statuses</option>
-              {STATUS_OPTIONS.map(option => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-      </Card>
+      {/* Search */}
+      <div className="relative max-w-xl">
+        <label htmlFor="career-search" className="sr-only">
+          Search applications
+        </label>
+        <svg
+          className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          aria-hidden
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+          />
+        </svg>
+        <input
+          id="career-search"
+          type="search"
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
+          placeholder="Search by name, email, phone, or city..."
+          className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        />
+      </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        {isLoading ? (
-          // Skeleton stat cards
+      {/* Filter + stats (single row on large screens) */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 items-end">
+        <div className="col-span-2 sm:col-span-1">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Filter by Status
+          </label>
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          >
+            <option value="">All Statuses</option>
+            {STATUS_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {listLoading ? (
           Array.from({ length: 4 }).map((_, i) => (
             <Card key={i}>
               <div className="animate-pulse space-y-2">
-                <div className="h-4 bg-gray-200 rounded w-24"></div>
-                <div className="h-8 bg-gray-200 rounded w-12"></div>
+                <div className="h-4 bg-gray-200 rounded w-24" />
+                <div className="h-8 bg-gray-200 rounded w-12" />
               </div>
             </Card>
           ))
@@ -134,24 +169,26 @@ export const CareerApplications = () => {
           <>
             <Card>
               <div className="text-sm text-gray-600">Total Applications</div>
-              <div className="text-2xl font-bold text-gray-900">{applications.length}</div>
+              <div className="text-2xl font-bold text-gray-900">
+                {currentData?.total ?? applications.length}
+              </div>
             </Card>
             <Card>
               <div className="text-sm text-gray-600">Pending</div>
               <div className="text-2xl font-bold text-yellow-600">
-                {applications.filter(a => a.status === 'pending').length}
+                {applications.filter((a) => a.status === 'pending').length}
               </div>
             </Card>
             <Card>
               <div className="text-sm text-gray-600">Shortlisted</div>
               <div className="text-2xl font-bold text-green-600">
-                {applications.filter(a => a.status === 'shortlisted').length}
+                {applications.filter((a) => a.status === 'shortlisted').length}
               </div>
             </Card>
             <Card>
               <div className="text-sm text-gray-600">Hired</div>
               <div className="text-2xl font-bold text-emerald-600">
-                {applications.filter(a => a.status === 'hired').length}
+                {applications.filter((a) => a.status === 'hired').length}
               </div>
             </Card>
           </>
@@ -179,7 +216,7 @@ export const CareerApplications = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {isLoading ? (
+              {listLoading ? (
                 // Skeleton loading rows
                 Array.from({ length: 5 }).map((_, i) => (
                   <tr key={i}>
@@ -218,8 +255,8 @@ export const CareerApplications = () => {
                 ))
               ) : applications.length === 0 ? (
                 <tr>
-                  <td colSpan="6" className="px-6 py-12 text-center text-gray-500">
-                    No applications found
+                  <td colSpan="4" className="px-6 py-12 text-center text-gray-500">
+                    {search ? 'No applications match your search' : 'No applications found'}
                   </td>
                 </tr>
               ) : (
@@ -264,6 +301,7 @@ export const CareerApplications = () => {
             </tbody>
           </table>
         </div>
+        <Pagination pagination={tablePagination} onPageChange={onPageChange} />
       </Card>
 
       {/* Details Modal */}

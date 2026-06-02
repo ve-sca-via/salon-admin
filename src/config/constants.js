@@ -45,7 +45,7 @@ export const TIME_FORMAT = 'hh:mm a';
 export const DATETIME_FORMAT = 'MMM dd, yyyy hh:mm a';
 
 // Pagination
-export const ITEMS_PER_PAGE = 20;
+export const ITEMS_PER_PAGE = 10;
 
 // Chart Colors
 export const CHART_COLORS = {
