@@ -17,6 +17,8 @@ import {
   salonApi
 } from '../services/api/salonApi';
 import { supabase } from '../config/supabase';
+import { usePagination } from '../hooks/usePagination';
+import { buildEstimatedPagination } from '../utils/pagination';
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
 
@@ -56,13 +58,19 @@ const getAgreementDocumentSignedUrl = async (pathOrUrl) => {
 };
 
 export const PendingSalons = () => {
+  const { currentPage, onPageChange, offset, pageSize } = usePagination([]);
+
   // RTK Query hooks
   const dispatch = useDispatch();
-  const { data: pendingData, isLoading, isFetching } = useGetPendingSalonsQuery();
+  const { data: pendingData, isLoading, isFetching } = useGetPendingSalonsQuery({
+    limit: pageSize,
+    offset,
+  });
   const [approveRequest] = useApproveVendorRequestMutation();
   const [rejectRequest] = useRejectVendorRequestMutation();
   
   const pendingRequests = pendingData?.data || pendingData || [];
+  const tablePagination = buildEstimatedPagination(currentPage, pendingRequests, pageSize);
   
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
@@ -303,7 +311,13 @@ export const PendingSalons = () => {
             <p className="text-gray-600">No pending salon submissions at the moment</p>
           </div>
         ) : (
-          <Table columns={columns} data={pendingRequests} />
+          <Table
+            columns={columns}
+            data={pendingRequests}
+            isLoading={isLoading || isFetching}
+            pagination={tablePagination}
+            onPageChange={onPageChange}
+          />
         )}
       </Card>
 

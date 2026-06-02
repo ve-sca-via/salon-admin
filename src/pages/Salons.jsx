@@ -1,4 +1,6 @@
 import { useState, useMemo } from 'react';
+import { usePagination } from '../hooks/usePagination';
+import { paginateClient, buildTablePagination } from '../utils/pagination';
 import { 
   useGetAllSalonsQuery, 
   useUpdateSalonMutation,
@@ -61,6 +63,7 @@ const Salons = () => {
   // State
   const [activeTab, setActiveTab] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const { currentPage, onPageChange, pageSize } = usePagination(activeTab, searchQuery);
   const [selectedSalon, setSelectedSalon] = useState(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [sendingReminder, setSendingReminder] = useState(null);
@@ -96,12 +99,20 @@ const Salons = () => {
         return salons.filter(s => !s.registration_fee_paid);
       case 'inactive':
         return salons.filter(s => !s.is_active);
-      case 'top_performers':
-        return salons.filter(s => s.average_rating >= 4.0 && s.total_reviews >= 5);
       default:
         return salons;
     }
   }, [salonsData, activeTab, searchQuery]);
+
+  const paginatedSalons = useMemo(
+    () => paginateClient(filteredSalons, currentPage, pageSize),
+    [filteredSalons, currentPage, pageSize]
+  );
+  const tablePagination = buildTablePagination(
+    currentPage,
+    filteredSalons.length,
+    pageSize
+  );
 
   // Dashboard statistics
   const stats = useMemo(() => {
@@ -349,7 +360,6 @@ const Salons = () => {
     { id: 'needs_verification', label: 'Needs Verification', count: stats.needsVerification },
     { id: 'needs_payment', label: 'Needs Payment', count: stats.needsPayment },
     { id: 'inactive', label: 'Inactive', count: stats.total - stats.active },
-    { id: 'top_performers', label: 'Top Performers', count: 0 }
   ];
 
   return (
@@ -416,9 +426,11 @@ const Salons = () => {
             </p>
           </div>
         ) : (
-          <Table 
-            data={filteredSalons} 
+          <Table
+            data={paginatedSalons}
             columns={columns}
+            pagination={tablePagination}
+            onPageChange={onPageChange}
           />
         )}
       </Card>

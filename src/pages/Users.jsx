@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   useGetAllUsersQuery, 
   useCreateUserMutation, 
@@ -14,18 +14,42 @@ import { Badge } from '../components/common/Badge';
 import { format } from 'date-fns';
 import { toast } from 'react-toastify';
 import { ROLES, ROLE_LABELS, CREATABLE_ROLES } from '../config/constants';
+import { usePagination } from '../hooks/usePagination';
+import { buildTablePagination } from '../utils/pagination';
 
 export const Users = () => {
   // RTK Query hooks
   const [roleFilter, setRoleFilter] = useState('');
-  const { data: usersData, isLoading } = useGetAllUsersQuery({ role: roleFilter });
+  const [searchInput, setSearchInput] = useState('');
+  const [search, setSearch] = useState('');
+  const { currentPage, onPageChange, page, pageSize } = usePagination(roleFilter, search);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setSearch(searchInput.trim()), 300);
+    return () => clearTimeout(timer);
+  }, [searchInput]);
+
+  const queryArgs = {
+    role: roleFilter || undefined,
+    page,
+    limit: pageSize,
+    search: search || undefined,
+  };
+
+  const { currentData, isLoading, isFetching } = useGetAllUsersQuery(queryArgs, {
+    refetchOnMountOrArgChange: true,
+  });
   const [createUserMutation, { isLoading: isCreating }] = useCreateUserMutation();
   const [updateUserMutation, { isLoading: isUpdating }] = useUpdateUserMutation();
   const [deleteUserMutation] = useDeleteUserMutation();
-  
-  const users = usersData?.data || usersData || [];
-  
-  const [search, setSearch] = useState('');
+
+  // Use currentData (not data) so stale results from a previous search are not shown
+  const users = currentData?.data || [];
+  const tablePagination = buildTablePagination(
+    currentPage,
+    currentData?.total ?? 0,
+    pageSize
+  );
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
@@ -43,7 +67,7 @@ export const Users = () => {
   const [formErrors, setFormErrors] = useState({});
 
   const handleSearch = (e) => {
-    setSearch(e.target.value);
+    setSearchInput(e.target.value);
   };
 
   const validatePassword = (password) => {
@@ -343,7 +367,7 @@ export const Users = () => {
         <div className="flex flex-col md:flex-row gap-4 mb-6">
           <Input
             placeholder="Search by name or email..."
-            value={search}
+            value={searchInput}
             onChange={handleSearch}
             className="md:w-96"
           />
@@ -364,7 +388,9 @@ export const Users = () => {
         <Table
           columns={columns}
           data={users}
-          isLoading={isLoading}
+          isLoading={isLoading || isFetching}
+          pagination={tablePagination}
+          onPageChange={onPageChange}
         />
       </Card>
 

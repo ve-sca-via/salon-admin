@@ -4,6 +4,8 @@
  */
 
 import axios from 'axios';
+import { getApiErrorMessage } from '../../utils/apiErrorMessage';
+import { clearAuthStorage, syncTokenExpiryFromJwt, touchActivity } from '../../utils/session';
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
 
@@ -58,19 +60,22 @@ const refreshAccessToken = async () => {
 
     const data = await response.json();
     const newToken = data.access_token;
-    
-    // Store new token
+    const newRefresh = data.refresh_token;
+    const existingRefresh = localStorage.getItem('refresh_token');
+    const storedRefresh = newRefresh || existingRefresh;
+
     localStorage.setItem('access_token', newToken);
-    
-    // Update default header
+    if (newRefresh) {
+      localStorage.setItem('refresh_token', newRefresh);
+    }
+    syncTokenExpiryFromJwt(newToken, storedRefresh);
+    touchActivity();
+
     axiosInstance.defaults.headers.common['Authorization'] = `Bearer ${newToken}`;
-    
+
     return newToken;
   } catch (error) {
-    // Refresh failed - clear storage
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('refresh_token');
-    localStorage.removeItem('user');
+    clearAuthStorage();
     throw error;
   }
 };
@@ -107,9 +112,7 @@ axiosInstance.interceptors.response.use(
     // Check if token was revoked (logged out elsewhere)
     const errorMessage = error.response?.data?.detail || '';
     if (errorMessage === 'Token has been revoked') {
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('refresh_token');
-      localStorage.removeItem('user');
+      clearAuthStorage();
       window.location.href = '/login';
       return Promise.reject(new Error('Session expired. Please login again.'));
     }
@@ -155,11 +158,8 @@ axiosInstance.interceptors.response.use(
           // Refresh failed - reject all queued requests
           processQueue(err, null);
           
-          // Logout user
-          localStorage.removeItem('access_token');
-          localStorage.removeItem('refresh_token');
-          localStorage.removeItem('user');
-          
+          clearAuthStorage();
+
           // Dispatch logout event for React app to handle
           window.dispatchEvent(new CustomEvent('auth:logout', { detail: 'Session expired' }));
           
@@ -209,10 +209,19 @@ const axiosBaseQuery =
         status = 'FETCH_ERROR';
       }
       
+      const rawData = err.response?.data ?? err.message;
+      const message = getApiErrorMessage({ status, data: rawData }, 'An error occurred');
+      const data =
+        rawData && typeof rawData === 'object' && !Array.isArray(rawData)
+          ? { ...rawData, detail: message }
+          : typeof rawData === 'string'
+            ? { detail: message }
+            : { detail: message };
+
       return {
         error: {
           status: status,
-          data: err.response?.data || err.message,
+          data,
         },
       };
     }

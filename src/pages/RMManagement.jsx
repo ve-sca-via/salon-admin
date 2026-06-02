@@ -6,21 +6,31 @@ import { LoadingSpinner } from '../components/common/LoadingSpinner';
 import { Modal } from '../components/common/Modal';
 import { Table } from '../components/common/Table';
 import { useGetAllRMsQuery, useUpdateRMProfileMutation } from '../services/api/userApi';
+import { usePagination } from '../hooks/usePagination';
+import { buildEstimatedPagination } from '../utils/pagination';
 import { format } from 'date-fns';
+import { getApiErrorMessage } from '../utils/apiErrorMessage';
+
+function formatDateForInput(dateValue) {
+  if (!dateValue) return '';
+  const str = String(dateValue);
+  return str.includes('T') ? str.split('T')[0] : str.slice(0, 10);
+}
 
 export const RMManagement = () => {
   // RTK Query hooks
-  const { data: rmsData, isLoading } = useGetAllRMsQuery();
+  const { currentPage, onPageChange, offset, pageSize } = usePagination([]);
+  const { data: rmsData, isLoading } = useGetAllRMsQuery({ limit: pageSize, offset });
   const [updateRMProfile, { isLoading: isUpdating }] = useUpdateRMProfileMutation();
   
   const rms = rmsData?.data || rmsData || [];
+  const tablePagination = buildEstimatedPagination(currentPage, rms, pageSize);
   
   const [selectedRM, setSelectedRM] = useState(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editFormData, setEditFormData] = useState({
     full_name: '',
-    phone: '',
     email: '',
     employee_id: '',
     assigned_territories: '',
@@ -38,13 +48,12 @@ export const RMManagement = () => {
     setSelectedRM(rm);
     setEditFormData({
       full_name: rm.profiles?.full_name || rm.full_name || '',
-      phone: rm.profiles?.phone || rm.phone || '',
       email: rm.profiles?.email || rm.email || '',
       employee_id: rm.employee_id || '',
-      assigned_territories: Array.isArray(rm.assigned_territories) 
-        ? rm.assigned_territories.join(', ') 
-        : '',
-      joining_date: rm.joining_date || '',
+      assigned_territories: Array.isArray(rm.assigned_territories)
+        ? rm.assigned_territories.join(', ')
+        : (rm.assigned_territories || ''),
+      joining_date: formatDateForInput(rm.joining_date),
       manager_notes: rm.manager_notes || '',
       is_active: rm.profiles?.is_active ?? rm.is_active ?? true,
     });
@@ -56,15 +65,12 @@ export const RMManagement = () => {
     
     try {
       const updateData = {
-        full_name: editFormData.full_name,
-        phone: editFormData.phone,
-        email: editFormData.email,
-        employee_id: editFormData.employee_id || null,
+        full_name: editFormData.full_name.trim(),
+        email: editFormData.email.trim(),
         assigned_territories: editFormData.assigned_territories
-          ? editFormData.assigned_territories.split(',').map(t => t.trim()).filter(Boolean)
+          ? editFormData.assigned_territories.split(',').map((t) => t.trim()).filter(Boolean)
           : [],
-        joining_date: editFormData.joining_date || null,
-        manager_notes: editFormData.manager_notes || null,
+        manager_notes: editFormData.manager_notes.trim() || null,
         is_active: editFormData.is_active,
       };
 
@@ -77,7 +83,7 @@ export const RMManagement = () => {
       setIsEditModalOpen(false);
       setSelectedRM(null);
     } catch (error) {
-      toast.error(error?.data?.detail || 'Failed to update RM profile');
+      toast.error(getApiErrorMessage(error, 'Failed to update RM profile'));
     }
   };
 
@@ -250,7 +256,13 @@ export const RMManagement = () => {
               <p className="text-gray-600">No relationship managers registered yet</p>
             </div>
           ) : (
-            <Table columns={columns} data={rms} />
+            <Table
+              columns={columns}
+              data={rms}
+              isLoading={isLoading}
+              pagination={tablePagination}
+              onPageChange={onPageChange}
+            />
           )}
         </div>
       </Card>
@@ -287,6 +299,21 @@ export const RMManagement = () => {
                   <p className="text-sm text-gray-600">Joining Date</p>
                   <p className="font-medium">
                     {selectedRM.joining_date ? format(new Date(selectedRM.joining_date), 'PPP') : 'Not set'}
+                  </p>
+                </div>
+                <div className="col-span-2">
+                  <p className="text-sm text-gray-600">Assigned Territories</p>
+                  <p className="font-medium">
+                    {Array.isArray(selectedRM.assigned_territories) &&
+                    selectedRM.assigned_territories.length > 0
+                      ? selectedRM.assigned_territories.join(', ')
+                      : 'None assigned'}
+                  </p>
+                </div>
+                <div className="col-span-2">
+                  <p className="text-sm text-gray-600">Manager Notes</p>
+                  <p className="font-medium whitespace-pre-wrap">
+                    {selectedRM.manager_notes || '—'}
                   </p>
                 </div>
                 <div>
@@ -390,18 +417,6 @@ export const RMManagement = () => {
                     required
                     value={editFormData.email}
                     onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Phone
-                  </label>
-                  <input
-                    type="tel"
-                    value={editFormData.phone}
-                    onChange={(e) => setEditFormData({ ...editFormData, phone: e.target.value })}
-                    placeholder="+91XXXXXXXXXX"
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
