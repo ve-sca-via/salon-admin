@@ -147,7 +147,7 @@ const SubcategoryPanel = ({ category, onClose }) => {
         is_active: !currentStatus,
       }).unwrap();
       toast.success(`Subcategory ${!currentStatus ? 'activated' : 'deactivated'} successfully`);
-    } catch (error) {
+    } catch {
       toast.error('Failed to toggle status');
     }
   };
@@ -192,6 +192,17 @@ const SubcategoryPanel = ({ category, onClose }) => {
           )}
         </div>
       ),
+    },
+    {
+      header: 'Sub-types',
+      cell: (row) =>
+        row.sub_subcategory_count > 0 ? (
+          <Badge variant="info">
+            {row.sub_subcategory_count} sub-type{row.sub_subcategory_count !== 1 ? 's' : ''}
+          </Badge>
+        ) : (
+          <span className="text-sm text-gray-400">—</span>
+        ),
     },
     {
       header: 'Order',
