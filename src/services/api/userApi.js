@@ -143,16 +143,6 @@ export const userApi = createApi({
       }),
       invalidatesTags: ['RMs', { type: 'Users', id: 'LIST' }],
     }),
-
-    // Update RM status
-    updateRMStatus: builder.mutation({
-      query: ({ rmId, isActive }) => ({
-        url: `/api/v1/admin/rms/${rmId}/status`,
-        method: 'put',
-        data: { is_active: isActive },
-      }),
-      invalidatesTags: ['RMs', 'DashboardStats'],
-    }),
   }),
 });
 
@@ -164,5 +154,4 @@ export const {
   useDeleteUserMutation,
   useGetAllRMsQuery,
   useUpdateRMProfileMutation,
-  useUpdateRMStatusMutation,
 } = userApi;
