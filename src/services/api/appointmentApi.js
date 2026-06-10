@@ -36,16 +36,6 @@ export const appointmentApi = createApi({
       refetchOnReconnect: true,
     }),
 
-    // Get single appointment
-    getAppointmentById: builder.query({
-      query: (appointmentId) => ({
-        url: `/api/v1/admin/bookings/${appointmentId}`,
-        method: 'get',
-      }),
-      providesTags: (result, error, id) => [{ type: 'Appointment', id }],
-      keepUnusedDataFor: 300,
-    }),
-
     // Update appointment status (admin)
     updateAppointmentStatus: builder.mutation({
       query: ({ appointmentId, status }) => ({
@@ -91,36 +81,10 @@ export const appointmentApi = createApi({
         { type: 'Appointments', id: 'LIST' },
       ],
     }),
-
-    // Delete appointment (admin)
-    deleteAppointment: builder.mutation({
-      query: (appointmentId) => ({
-        url: `/api/v1/admin/bookings/${appointmentId}`,
-        method: 'delete',
-      }),
-      // Optimistically remove from cache
-      async onQueryStarted(appointmentId, { dispatch, queryFulfilled }) {
-        const patchResult = dispatch(
-          appointmentApi.util.updateQueryData('getAllAppointments', {}, (draft) => {
-            if (draft?.data) {
-              draft.data = draft.data.filter(a => a.id !== appointmentId);
-            }
-          })
-        );
-        try {
-          await queryFulfilled;
-        } catch {
-          patchResult.undo();
-        }
-      },
-      invalidatesTags: [{ type: 'Appointments', id: 'LIST' }],
-    }),
   }),
 });
 
 export const {
   useGetAllAppointmentsQuery,
-  useGetAppointmentByIdQuery,
   useUpdateAppointmentStatusMutation,
-  useDeleteAppointmentMutation,
 } = appointmentApi;
