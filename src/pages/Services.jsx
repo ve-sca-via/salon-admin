@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, Fragment } from 'react';
 import {
   useGetAllServiceCategoriesQuery,
   useCreateServiceCategoryMutation,
@@ -17,9 +17,14 @@ import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
 import { Input, Textarea } from '../components/common/FormElements';
 import { Table } from '../components/common/Table';
+import { Pagination } from '../components/common/Pagination';
+import { SkeletonTable } from '../components/common/Skeleton';
 import { Modal } from '../components/common/Modal';
 import { Badge } from '../components/common/Badge';
+import { Dropdown, DropdownItem, DropdownDivider, DropdownTrigger } from '../components/common/Dropdown';
 import { toast } from 'react-toastify';
+import { usePagination } from '../hooks/usePagination';
+import { buildEstimatedPagination } from '../utils/pagination';
 
 // =====================================================
 // SUBCATEGORY PANEL COMPONENT
@@ -142,7 +147,7 @@ const SubcategoryPanel = ({ category, onClose }) => {
         is_active: !currentStatus,
       }).unwrap();
       toast.success(`Subcategory ${!currentStatus ? 'activated' : 'deactivated'} successfully`);
-    } catch (error) {
+    } catch {
       toast.error('Failed to toggle status');
     }
   };
@@ -189,6 +194,17 @@ const SubcategoryPanel = ({ category, onClose }) => {
       ),
     },
     {
+      header: 'Sub-types',
+      cell: (row) =>
+        row.sub_subcategory_count > 0 ? (
+          <Badge variant="info">
+            {row.sub_subcategory_count} sub-type{row.sub_subcategory_count !== 1 ? 's' : ''}
+          </Badge>
+        ) : (
+          <span className="text-sm text-gray-400">—</span>
+        ),
+    },
+    {
       header: 'Order',
       cell: (row) => <Badge variant="info">{row.display_order}</Badge>,
     },
@@ -203,28 +219,27 @@ const SubcategoryPanel = ({ category, onClose }) => {
     {
       header: 'Actions',
       cell: (row) => (
-        <div className="flex gap-2">
-          <Button size="sm" variant="outline" onClick={() => handleEditSubcategory(row)}>
-            Edit
-          </Button>
-          <Button
-            size="sm"
+        <Dropdown trigger={<DropdownTrigger />}>
+          <DropdownItem label="Edit" onClick={() => handleEditSubcategory(row)} />
+          <DropdownItem
+            label={row.is_active ? 'Deactivate' : 'Activate'}
             variant={row.is_active ? 'warning' : 'success'}
             onClick={() => handleToggleSubcategoryStatus(row.id, row.is_active)}
-          >
-            {row.is_active ? 'Deactivate' : 'Activate'}
-          </Button>
-          <Button size="sm" variant="danger" onClick={() => handleDeleteSubcategory(row.id)}>
-            Delete
-          </Button>
-        </div>
+          />
+          <DropdownDivider />
+          <DropdownItem
+            label="Delete"
+            variant="error"
+            onClick={() => handleDeleteSubcategory(row.id)}
+          />
+        </Dropdown>
       ),
     },
   ];
 
   return (
-    <div className="mt-4 border-t pt-4">
-      <div className="flex justify-between items-center mb-4">
+    <div>
+      <div className="flex justify-between items-center mb-4 px-6 pt-4">
         <div>
           <h3 className="text-lg font-semibold text-gray-800">
             Subcategories under &quot;{category.name}&quot;
@@ -244,11 +259,11 @@ const SubcategoryPanel = ({ category, onClose }) => {
       </div>
 
       {subcategories.length > 0 ? (
-        <div className="bg-gray-50 rounded-lg p-3">
+        <div className="bg-white rounded-lg mx-6 mb-4 border border-gray-200 overflow-hidden">
           <Table columns={subColumns} data={subcategories} isLoading={isLoading} />
         </div>
       ) : (
-        <div className="bg-gray-50 rounded-lg p-6 text-center text-gray-500">
+        <div className="mx-6 mb-4 bg-white rounded-lg border border-gray-200 p-6 text-center text-gray-500">
           {isLoading ? 'Loading subcategories...' : 'No subcategories yet. Click "+ Add Subcategory" to create one.'}
         </div>
       )}
@@ -433,7 +448,11 @@ const SubcategoryPanel = ({ category, onClose }) => {
 // MAIN SERVICES PAGE
 // =====================================================
 export const Services = () => {
-  const { data: categoriesData, isLoading } = useGetAllServiceCategoriesQuery({});
+  const { currentPage, onPageChange, offset, pageSize } = usePagination([]);
+  const { data: categoriesData, isLoading } = useGetAllServiceCategoriesQuery({
+    limit: pageSize,
+    offset,
+  });
   const { data: allSubcategoriesData } = useGetAllSubcategoriesQuery({});
   const [createCategory] = useCreateServiceCategoryMutation();
   const [updateCategory] = useUpdateServiceCategoryMutation();
@@ -442,6 +461,7 @@ export const Services = () => {
   const [uploadIcon] = useUploadServiceCategoryIconMutation();
 
   const categories = categoriesData?.data || [];
+  const tablePagination = buildEstimatedPagination(currentPage, categories, pageSize);
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -600,113 +620,57 @@ export const Services = () => {
     setExpandedCategoryId(expandedCategoryId === categoryId ? null : categoryId);
   };
 
-  const columns = [
-    {
-      header: 'Icon',
-      cell: (row) => (
-        <div className="flex items-center justify-center w-12 h-12">
-          {row.icon_url ? (
-            <img
-              src={row.icon_url}
-              alt={row.name}
-              className="w-10 h-10 object-cover rounded"
-            />
-          ) : (
-            <div className="w-10 h-10 bg-gray-200 rounded flex items-center justify-center text-gray-400">
-              <span className="text-xs">No Icon</span>
-            </div>
-          )}
+  const renderCategoryIcon = (row) => (
+    <div className="flex items-center justify-center w-12 h-12">
+      {row.icon_url ? (
+        <img src={row.icon_url} alt={row.name} className="w-10 h-10 object-cover rounded" />
+      ) : (
+        <div className="w-10 h-10 bg-gray-200 rounded flex items-center justify-center text-gray-400">
+          <span className="text-xs">No Icon</span>
         </div>
-      ),
-    },
-    {
-      header: 'Category Name',
-      cell: (row) => {
-        const subCount = allSubcategoriesData?.data?.filter(sub => sub.parent_category_id === row.id)?.length || 0;
-        return (
-          <div>
-            <div className="font-medium text-gray-900 flex items-center gap-2">
-              {row.name}
-              {subCount > 0 && (
-                <Badge variant="info" className="text-xs">
-                  {subCount} subcategorie{subCount !== 1 ? 's' : ''}
-                </Badge>
-              )}
-            </div>
-            {row.description && (
-              <div className="text-sm text-gray-500 mt-1 line-clamp-2">{row.description}</div>
-            )}
-          </div>
-        );
-      },
-    },
-    {
-      header: 'Display Order',
-      cell: (row) => (
-        <Badge variant="info">{row.display_order}</Badge>
-      ),
-    },
-    {
-      header: 'Status',
-      cell: (row) => (
-        <Badge variant={row.is_active ? 'success' : 'warning'}>
-          {row.is_active ? 'Active' : 'Inactive'}
-        </Badge>
-      ),
-    },
-    {
-      header: 'Actions',
-      cell: (row) => (
-        <div className="flex gap-2 flex-wrap">
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => toggleSubcategories(row.id)}
-          >
-            {expandedCategoryId === row.id ? '▲ Hide Subcategories' : '▼ Subcategories'}
-          </Button>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => handleEdit(row)}
-          >
-            Edit
-          </Button>
-          <Button
-            size="sm"
-            variant={row.is_active ? 'warning' : 'success'}
-            onClick={() => handleToggleStatus(row.id, row.is_active)}
-          >
-            {row.is_active ? 'Deactivate' : 'Activate'}
-          </Button>
-          <Button
-            size="sm"
-            variant="danger"
-            onClick={() => handleDelete(row.id)}
-          >
-            Delete
-          </Button>
-        </div>
-      ),
-    },
-  ];
-
-  // Custom row renderer to support expandable subcategory panels
-  const renderCategoryRow = (category, index) => (
-    <div key={category.id}>
-      {/* Standard row via Table component handles this */}
-      {expandedCategoryId === category.id && (
-        <tr>
-          <td colSpan={columns.length} className="px-4 py-0 bg-white">
-            <SubcategoryPanel
-              category={category}
-              onClose={() => setExpandedCategoryId(null)}
-            />
-          </td>
-        </tr>
       )}
     </div>
   );
+
+  const renderCategoryName = (row) => {
+    const subCount =
+      allSubcategoriesData?.data?.filter((sub) => sub.parent_category_id === row.id)?.length || 0;
+    return (
+      <div>
+        <div className="font-medium text-gray-900 flex items-center gap-2">
+          {row.name}
+          {subCount > 0 && (
+            <Badge variant="info" className="text-xs">
+              {subCount} subcategorie{subCount !== 1 ? 's' : ''}
+            </Badge>
+          )}
+        </div>
+        {row.description && (
+          <div className="text-sm text-gray-500 mt-1 line-clamp-2">{row.description}</div>
+        )}
+      </div>
+    );
+  };
+
+  const renderCategoryActions = (row) => (
+    <div className="flex items-center justify-end gap-2">
+      <Button size="sm" variant="outline" onClick={() => toggleSubcategories(row.id)}>
+        {expandedCategoryId === row.id ? '▲ Hide Subcategories' : '▼ Subcategories'}
+      </Button>
+      <Dropdown trigger={<DropdownTrigger />}>
+        <DropdownItem label="Edit" onClick={() => handleEdit(row)} />
+        <DropdownItem
+          label={row.is_active ? 'Deactivate' : 'Activate'}
+          variant={row.is_active ? 'warning' : 'success'}
+          onClick={() => handleToggleStatus(row.id, row.is_active)}
+        />
+        <DropdownDivider />
+        <DropdownItem label="Delete" variant="error" onClick={() => handleDelete(row.id)} />
+      </Dropdown>
+    </div>
+  );
+
+  const categoryColumnCount = 5;
 
   return (
     <div className="space-y-6">
@@ -722,17 +686,69 @@ export const Services = () => {
         </Button>
       </div>
 
-      {/* Categories Table */}
+      {/* Categories Table (expandable rows) */}
       <Card>
-        <Table columns={columns} data={categories} isLoading={isLoading} />
-
-        {/* Render expanded subcategory panels inline */}
-        {expandedCategoryId && categories.find(c => c.id === expandedCategoryId) && (
-          <div className="px-4 pb-4">
-            <SubcategoryPanel
-              category={categories.find(c => c.id === expandedCategoryId)}
-              onClose={() => setExpandedCategoryId(null)}
-            />
+        {isLoading ? (
+          <SkeletonTable rows={5} columns={categoryColumnCount} />
+        ) : categories.length === 0 ? (
+          <div className="flex items-center justify-center h-64 text-gray-500">
+            No categories found
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Icon
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Category Name
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Display Order
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {categories.map((category) => (
+                  <Fragment key={category.id}>
+                    <tr className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap">{renderCategoryIcon(category)}</td>
+                      <td className="px-6 py-4 text-sm text-gray-900">{renderCategoryName(category)}</td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <Badge variant="info">{category.display_order}</Badge>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <Badge variant={category.is_active ? 'success' : 'warning'}>
+                          {category.is_active ? 'Active' : 'Inactive'}
+                        </Badge>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-900">
+                        {renderCategoryActions(category)}
+                      </td>
+                    </tr>
+                    {expandedCategoryId === category.id && (
+                      <tr>
+                        <td colSpan={categoryColumnCount} className="p-0 bg-gray-50">
+                          <SubcategoryPanel
+                            category={category}
+                            onClose={() => setExpandedCategoryId(null)}
+                          />
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
+                ))}
+              </tbody>
+            </table>
+            <Pagination pagination={tablePagination} onPageChange={onPageChange} />
           </div>
         )}
       </Card>

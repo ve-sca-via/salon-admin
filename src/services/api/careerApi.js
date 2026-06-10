@@ -8,10 +8,11 @@ export const careerApi = createApi({
   endpoints: (builder) => ({
     // Get all career applications
     getCareerApplications: builder.query({
-      query: ({ status, position, skip = 0, limit = 50 } = {}) => {
+      query: ({ status, position, search, skip = 0, limit = 50 } = {}) => {
         const params = new URLSearchParams();
         if (status) params.append('status', status);
         if (position) params.append('position', position);
+        if (search?.trim()) params.append('search', search.trim());
         params.append('skip', skip);
         params.append('limit', limit);
         
@@ -21,8 +22,9 @@ export const careerApi = createApi({
         };
       },
       providesTags: ['CareerApplications'],
-      keepUnusedDataFor: 300, // Cache for 5 minutes
+      keepUnusedDataFor: 300,
       refetchOnReconnect: true,
+      refetchOnMountOrArgChange: true,
     }),
 
     // Get single application

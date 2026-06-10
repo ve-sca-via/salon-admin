@@ -1,4 +1,5 @@
 import { createSlice } from '@reduxjs/toolkit';
+import { REHYDRATE } from 'redux-persist';
 
 const initialState = {
   user: null,
@@ -28,7 +29,14 @@ const authSlice = createSlice({
       state.user = null;
       state.isAuthenticated = false;
       state.error = null;
+      state.isLoading = false;
     },
+  },
+  extraReducers: (builder) => {
+    builder.addCase(REHYDRATE, (state) => {
+      // Always re-validate JWT / inactivity on full page load
+      state.isLoading = true;
+    });
   },
 });
 

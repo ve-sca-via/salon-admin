@@ -1,11 +1,11 @@
 import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect, useRef } from 'react';
-import { supabase } from '../../config/supabase'; // Still needed for real-time notifications
+import { supabase } from '../../config/supabase';
 import { logout as logoutAction } from '../../store/slices/authSlice';
 import { toast } from 'react-toastify';
-import { useGetPendingSalonsQuery, salonApi } from '../../services/api/salonApi';
 import { logout as apiLogout } from '../../services/api/authApi';
+import { clearAuthStorage } from '../../utils/session';
 import { configApi } from '../../services/api/configApi';
 import { persistor } from '../../store/store';
 
@@ -13,12 +13,7 @@ export const Header = () => {
   const { user } = useSelector((state) => state.auth);
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  
-  // Use RTK Query to fetch pending salons
-  const { data: pendingSalonsData } = useGetPendingSalonsQuery({ limit: 100 });
-  const pendingCount = pendingSalonsData?.data?.length || 0;
-  
-  const [hasNewNotification, setHasNewNotification] = useState(false);
+
   const [showUserMenu, setShowUserMenu] = useState(false);
   const menuRef = useRef(null);
 
@@ -34,7 +29,7 @@ export const Header = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // Subscribe to real-time changes for notifications
+  // Real-time alerts for new pending salon submissions (toast only; no bell UI)
   useEffect(() => {
     const channel = supabase
       .channel('header-notifications')
@@ -46,18 +41,11 @@ export const Header = () => {
           table: 'vendor_join_requests',
           filter: 'status=eq.pending',
         },
-        (payload) => {
-          // Update count and show animation
-          setHasNewNotification(true);
-          
-          // Show toast
-          toast.info('🔔 New salon submission received!', { 
+        () => {
+          toast.info('🔔 New salon submission received!', {
             autoClose: 5000,
-            onClick: () => navigate('/pending-salons')
+            onClick: () => navigate('/pending-salons'),
           });
-
-          // Remove animation after 3 seconds
-          setTimeout(() => setHasNewNotification(false), 3000);
         }
       )
       .on(
@@ -68,7 +56,7 @@ export const Header = () => {
           table: 'vendor_join_requests',
         },
         () => {
-          // RTK Query will automatically refetch when cache is invalidated
+          // RTK Query refetches when cache is invalidated elsewhere
         }
       )
       .subscribe();
@@ -81,44 +69,22 @@ export const Header = () => {
   const handleLogout = async () => {
     setShowUserMenu(false);
     try {
-      // Call backend logout endpoint to revoke token
       await apiLogout();
-      
-      // Clear Redux state
       dispatch(logoutAction());
-      
-      // Purge persisted cache (security: clear all cached data)
       await persistor.purge();
-      
       toast.success('Logged out successfully');
       navigate('/login');
     } catch (error) {
       toast.error('Error logging out');
-      
-      // Still clear local state even if API call fails
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('refresh_token');
-      localStorage.removeItem('user');
+
+      clearAuthStorage();
       dispatch(logoutAction());
-      
-      // Purge cache even on error
       await persistor.purge();
-      
+
       navigate('/login');
     }
   };
 
-  const handleNotificationClick = () => {
-    setHasNewNotification(false);
-    navigate('/pending-salons');
-  };
-
-  // Prefetch pending salons data on hover
-  const handleNotificationHover = () => {
-    dispatch(salonApi.util.prefetch('getPendingSalons', {}, { force: false }));
-  };
-
-  // Prefetch system config on hover
   const handleSettingsHover = () => {
     dispatch(configApi.util.prefetch('getSystemConfigs', undefined, { force: false }));
   };
@@ -135,33 +101,7 @@ export const Header = () => {
           <h2 className="text-2xl font-display font-semibold text-gray-900">Dashboard</h2>
         </div>
 
-        <div className="flex items-center space-x-6">
-          {/* Notifications */}
-          <button 
-            onClick={handleNotificationClick}
-            onMouseEnter={handleNotificationHover}
-            onFocus={handleNotificationHover}
-            className={`relative p-2 text-gray-600 hover:text-accent-orange hover:bg-orange-50 rounded-lg transition-all ${
-              hasNewNotification ? 'animate-bounce' : ''
-            }`}
-            title={`${pendingCount} pending salon${pendingCount !== 1 ? 's' : ''}`}
-          >
-            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-            </svg>
-            
-            {/* Notification Badge */}
-            {pendingCount > 0 && (
-              <span className={`absolute -top-1 -right-1 flex items-center justify-center min-w-[20px] h-5 px-1 text-xs font-bold text-white rounded-full transition-all ${
-                hasNewNotification 
-                  ? 'bg-red-600 animate-pulse' 
-                  : 'bg-accent-orange'
-              }`}>
-                {pendingCount > 99 ? '99+' : pendingCount}
-              </span>
-            )}
-          </button>
-
+        <div className="flex items-center">
           {/* User Menu */}
           <div className="relative" ref={menuRef}>
             <button
@@ -177,17 +117,16 @@ export const Header = () => {
               <div className="flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-r from-orange-500 to-orange-600 text-white font-semibold shadow-md">
                 {user?.full_name?.[0]?.toUpperCase() || user?.email?.[0]?.toUpperCase() || 'A'}
               </div>
-              <svg 
-                className={`w-4 h-4 text-gray-400 transition-transform ${showUserMenu ? 'rotate-180' : ''}`} 
-                fill="none" 
-                viewBox="0 0 24 24" 
+              <svg
+                className={`w-4 h-4 text-gray-400 transition-transform ${showUserMenu ? 'rotate-180' : ''}`}
+                fill="none"
+                viewBox="0 0 24 24"
                 stroke="currentColor"
               >
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
               </svg>
             </button>
 
-            {/* Dropdown Menu */}
             {showUserMenu && (
               <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-50">
                 <div className="px-4 py-3 border-b border-gray-100">
@@ -196,19 +135,6 @@ export const Header = () => {
                   </p>
                   <p className="text-xs text-gray-500 truncate">{user?.email}</p>
                 </div>
-                
-                <button
-                  onClick={() => {
-                    setShowUserMenu(false);
-                    navigate('/profile');
-                  }}
-                  className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center space-x-2"
-                >
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                  </svg>
-                  <span>Profile</span>
-                </button>
 
                 <button
                   onClick={() => {

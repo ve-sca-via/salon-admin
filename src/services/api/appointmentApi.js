@@ -14,10 +14,16 @@ export const appointmentApi = createApi({
   endpoints: (builder) => ({
     // Get all appointments (admin view)
     getAllAppointments: builder.query({
-      query: ({ status, limit = 50, offset = 0 } = {}) => ({
+      query: ({ status, limit = 20, page = 1, date_from, date_to } = {}) => ({
         url: '/api/v1/admin/bookings',
         method: 'get',
-        params: { status, limit, offset },
+        params: {
+          status,
+          limit,
+          page,
+          ...(date_from && { date_from }),
+          ...(date_to && { date_to }),
+        },
       }),
       providesTags: (result) =>
         result?.data
@@ -28,16 +34,6 @@ export const appointmentApi = createApi({
           : [{ type: 'Appointments', id: 'LIST' }],
       keepUnusedDataFor: 300, // Cache for 5 minutes
       refetchOnReconnect: true,
-    }),
-
-    // Get single appointment
-    getAppointmentById: builder.query({
-      query: (appointmentId) => ({
-        url: `/api/v1/admin/bookings/${appointmentId}`,
-        method: 'get',
-      }),
-      providesTags: (result, error, id) => [{ type: 'Appointment', id }],
-      keepUnusedDataFor: 300,
     }),
 
     // Update appointment status (admin)
@@ -85,36 +81,10 @@ export const appointmentApi = createApi({
         { type: 'Appointments', id: 'LIST' },
       ],
     }),
-
-    // Delete appointment (admin)
-    deleteAppointment: builder.mutation({
-      query: (appointmentId) => ({
-        url: `/api/v1/admin/bookings/${appointmentId}`,
-        method: 'delete',
-      }),
-      // Optimistically remove from cache
-      async onQueryStarted(appointmentId, { dispatch, queryFulfilled }) {
-        const patchResult = dispatch(
-          appointmentApi.util.updateQueryData('getAllAppointments', {}, (draft) => {
-            if (draft?.data) {
-              draft.data = draft.data.filter(a => a.id !== appointmentId);
-            }
-          })
-        );
-        try {
-          await queryFulfilled;
-        } catch {
-          patchResult.undo();
-        }
-      },
-      invalidatesTags: [{ type: 'Appointments', id: 'LIST' }],
-    }),
   }),
 });
 
 export const {
   useGetAllAppointmentsQuery,
-  useGetAppointmentByIdQuery,
   useUpdateAppointmentStatusMutation,
-  useDeleteAppointmentMutation,
 } = appointmentApi;

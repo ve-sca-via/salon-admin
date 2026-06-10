@@ -11,9 +11,12 @@ import { Modal } from '../components/common/Modal';
 import { Badge, StatusBadge } from '../components/common/Badge';
 import { format } from 'date-fns';
 import { toast } from 'react-toastify';
+import { usePagination } from '../hooks/usePagination';
+import { paginateClient, buildTablePagination } from '../utils/pagination';
 
 export const ProductOrders = () => {
   const [statusFilter, setStatusFilter] = useState('');
+  const { currentPage, onPageChange, pageSize } = usePagination(statusFilter);
   const { data: ordersData, isLoading } = useGetAllProductOrdersQuery();
   const [updateOrderStatus] = useUpdateProductOrderStatusMutation();
   
@@ -42,9 +45,16 @@ export const ProductOrders = () => {
     }
   };
 
-  const filteredOrders = statusFilter 
-    ? orders.filter(order => order.status === statusFilter)
+  const filteredOrders = statusFilter
+    ? orders.filter((order) => order.status === statusFilter)
     : orders;
+
+  const paginatedOrders = paginateClient(filteredOrders, currentPage, pageSize);
+  const tablePagination = buildTablePagination(
+    currentPage,
+    filteredOrders.length,
+    pageSize
+  );
 
   const columns = [
     {
@@ -152,8 +162,10 @@ export const ProductOrders = () => {
 
         <Table
           columns={columns}
-          data={filteredOrders}
+          data={paginatedOrders}
           isLoading={isLoading}
+          pagination={tablePagination}
+          onPageChange={onPageChange}
         />
       </Card>
 
