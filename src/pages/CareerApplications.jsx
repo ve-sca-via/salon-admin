@@ -31,6 +31,17 @@ const STATUS_OPTIONS = [
   { value: 'hired', label: 'Hired' }
 ];
 
+const formatDate = (dateString) => {
+  if (!dateString) return 'N/A';
+  return new Date(dateString).toLocaleDateString('en-IN', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+};
+
 export const CareerApplications = () => {
   const [statusFilter, setStatusFilter] = useState('');
   const [searchInput, setSearchInput] = useState('');
@@ -44,7 +55,7 @@ export const CareerApplications = () => {
   const [selectedApplication, setSelectedApplication] = useState(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [showUpdateModal, setShowUpdateModal] = useState(false);
-  
+
   const { currentData, isLoading, isFetching, refetch } = useGetCareerApplicationsQuery({
     status: statusFilter || undefined,
     search: search || undefined,
@@ -88,17 +99,6 @@ export const CareerApplications = () => {
     }
   };
 
-  const formatDate = (dateString) => {
-    if (!dateString) return 'N/A';
-    return new Date(dateString).toLocaleDateString('en-IN', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -131,7 +131,7 @@ export const CareerApplications = () => {
           type="search"
           value={searchInput}
           onChange={(e) => setSearchInput(e.target.value)}
-          placeholder="Search by name, email, phone, or city..."
+          placeholder="Search by name, email, phone, or application number..."
           className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
         />
       </div>
@@ -347,17 +347,6 @@ export const CareerApplications = () => {
 
 // Application Details Modal Component
 const ApplicationDetailsModal = ({ application, onClose, onDownload }) => {
-  const formatDate = (dateString) => {
-    if (!dateString) return 'N/A';
-    return new Date(dateString).toLocaleDateString('en-IN', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
   const InfoRow = ({ label, value }) => (
     <div>
       <label className="text-xs font-semibold text-gray-600 uppercase tracking-wider">{label}</label>

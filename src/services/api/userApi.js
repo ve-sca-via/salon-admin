@@ -37,16 +37,6 @@ export const userApi = createApi({
       refetchOnMountOrArgChange: true,
     }),
 
-    // Get single user
-    getUserById: builder.query({
-      query: (userId) => ({
-        url: `/api/v1/admin/users/${userId}`,
-        method: 'get',
-      }),
-      providesTags: (result, error, id) => [{ type: 'User', id }],
-      keepUnusedDataFor: 300,
-    }),
-
     // Create user (admin)
     createUser: builder.mutation({
       query: (userData) => ({
@@ -148,7 +138,6 @@ export const userApi = createApi({
 
 export const {
   useGetAllUsersQuery,
-  useGetUserByIdQuery,
   useCreateUserMutation,
   useUpdateUserMutation,
   useDeleteUserMutation,

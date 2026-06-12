@@ -41,18 +41,6 @@ export const productApi = createApi({
     }),
 
     // ========================================
-    // GET SINGLE PRODUCT
-    // ========================================
-    getProductById: builder.query({
-      query: (productId) => ({
-        url: `/api/v1/products/${productId}`,
-        method: 'get',
-      }),
-      providesTags: (result, error, id) => [{ type: 'Product', id }],
-      keepUnusedDataFor: 300,
-    }),
-
-    // ========================================
     // GET CATEGORIES (for filter dropdown)
     // ========================================
     getProductCategories: builder.query({
@@ -137,7 +125,6 @@ export const productApi = createApi({
 
 export const {
   useGetAllProductsQuery,
-  useGetProductByIdQuery,
   useGetProductCategoriesQuery,
   useCreateProductMutation,
   useUpdateProductMutation,

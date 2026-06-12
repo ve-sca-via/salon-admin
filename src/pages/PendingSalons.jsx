@@ -90,7 +90,7 @@ export const PendingSalons = () => {
           event: '*', // Listen to all events (INSERT, UPDATE, DELETE)
           schema: 'public',
           table: 'vendor_join_requests',
-          filter: 'status_filter=eq.pending', // Only listen to pending requests
+          filter: 'status=eq.pending', // Only listen to pending requests (column is `status`, not `status_filter`)
         },
         (payload) => {
           // Manually update cache instead of full refetch for better performance

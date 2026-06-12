@@ -27,17 +27,6 @@ export const careerApi = createApi({
       refetchOnMountOrArgChange: true,
     }),
 
-    // Get single application
-    getCareerApplication: builder.query({
-      query: (applicationId) => ({
-        url: `/api/v1/careers/applications/${applicationId}`,
-        method: 'GET'
-      }),
-      providesTags: (result, error, applicationId) => [
-        { type: 'CareerApplications', id: applicationId }
-      ]
-    }),
-
     // Update application status
     updateCareerApplication: builder.mutation({
       query: ({ applicationId, ...data }) => ({
@@ -63,7 +52,6 @@ export const careerApi = createApi({
 
 export const {
   useGetCareerApplicationsQuery,
-  useGetCareerApplicationQuery,
   useUpdateCareerApplicationMutation,
   useLazyGetDocumentDownloadUrlQuery
 } = careerApi;
