@@ -11,6 +11,7 @@ import { salonApi } from '../services/api/salonApi';
 import { userApi } from '../services/api/userApi';
 import { appointmentApi } from '../services/api/appointmentApi';
 import { careerApi } from '../services/api/careerApi';
+import { partnerApi } from '../services/api/partnerApi';
 import { serviceCategoryApi } from '../services/api/serviceCategoryApi';
 import { configApi } from '../services/api/configApi';
 import { productApi } from '../services/api/productApi';
@@ -34,6 +35,7 @@ const persistConfig = {
     userApi.reducerPath,         // 🔴 Contains customer emails/phones
     appointmentApi.reducerPath,  // 🔴 Contains customer booking details
     careerApi.reducerPath,       // 🔴 Contains applicant personal info
+    partnerApi.reducerPath,      // 🔴 Contains partner contact info
     serviceCategoryApi.reducerPath, // Low risk but unnecessary
     salonApi.reducerPath,        // 🔴 Contains salon data - MUST be fresh after mutations
     productApi.reducerPath,      // Product catalog - must be fresh after mutations
@@ -52,6 +54,7 @@ const rootReducer = combineReducers({
   [userApi.reducerPath]: userApi.reducer,
   [appointmentApi.reducerPath]: appointmentApi.reducer,
   [careerApi.reducerPath]: careerApi.reducer,
+  [partnerApi.reducerPath]: partnerApi.reducer,
   [serviceCategoryApi.reducerPath]: serviceCategoryApi.reducer,
   [configApi.reducerPath]: configApi.reducer,
   [productApi.reducerPath]: productApi.reducer,
@@ -82,6 +85,7 @@ export const store = configureStore({
       .concat(userApi.middleware)
       .concat(appointmentApi.middleware)
       .concat(careerApi.middleware)
+      .concat(partnerApi.middleware)
       .concat(serviceCategoryApi.middleware)
       .concat(configApi.middleware)
       .concat(productApi.middleware)
