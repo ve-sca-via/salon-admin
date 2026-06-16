@@ -36,6 +36,7 @@ const SystemConfig = lazy(() => import('./pages/SystemConfig').then(module => ({
 const Products = lazy(() => import('./pages/Products'));
 const Banners = lazy(() => import('./pages/Banners'));
 const ProductOrders = lazy(() => import('./pages/ProductOrders').then(module => ({ default: module.ProductOrders })));
+const Coupons = lazy(() => import('./pages/Coupons'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 
 function AppContent() {
@@ -238,6 +239,11 @@ function AppContent() {
                 <Route path="/product-orders" element={
                   <ErrorBoundary fallback="page">
                     <ProductOrders />
+                  </ErrorBoundary>
+                } />
+                <Route path="/coupons" element={
+                  <ErrorBoundary fallback="page">
+                    <Coupons />
                   </ErrorBoundary>
                 } />
               </Route>
