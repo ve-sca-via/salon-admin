@@ -16,6 +16,7 @@ import { configApi } from '../services/api/configApi';
 import { productApi } from '../services/api/productApi';
 import { productOrderApi } from '../services/api/productOrderApi';
 import { couponApi } from '../services/api/couponApi';
+import { bannerApi } from '../services/api/bannerApi';
 
 // Redux Persist Configuration
 const persistConfig = {
@@ -40,6 +41,7 @@ const persistConfig = {
     productApi.reducerPath,      // Product catalog - must be fresh after mutations
     productOrderApi.reducerPath, // Product orders - must be fresh
     couponApi.reducerPath,       // Coupons - must be fresh after mutations
+    bannerApi.reducerPath,       // Banners - must be fresh after mutations
   ],
   // Throttle writes to localStorage (better performance)
   throttle: 1000,
@@ -59,6 +61,7 @@ const rootReducer = combineReducers({
   [productApi.reducerPath]: productApi.reducer,
   [productOrderApi.reducerPath]: productOrderApi.reducer,
   [couponApi.reducerPath]: couponApi.reducer,
+  [bannerApi.reducerPath]: bannerApi.reducer,
 });
 
 // Wrap with persistReducer
@@ -90,6 +93,7 @@ export const store = configureStore({
       .concat(productApi.middleware)
       .concat(productOrderApi.middleware)
       .concat(couponApi.middleware),
+      .concat(bannerApi.middleware),
 });
 
 // Enable refetchOnFocus/refetchOnReconnect behaviors
