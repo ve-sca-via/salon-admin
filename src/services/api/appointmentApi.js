@@ -35,56 +35,9 @@ export const appointmentApi = createApi({
       keepUnusedDataFor: 300, // Cache for 5 minutes
       refetchOnReconnect: true,
     }),
-
-    // Update appointment status (admin)
-    updateAppointmentStatus: builder.mutation({
-      query: ({ appointmentId, status }) => ({
-        url: `/api/v1/admin/bookings/${appointmentId}/status`,
-        method: 'put',
-        data: { status },
-      }),
-      // Optimistic update - improved to handle all query variations
-      async onQueryStarted({ appointmentId, status }, { dispatch, queryFulfilled }) {
-        // Update all possible cache entries
-        const patches = [];
-        
-        // Update for unfiltered query
-        patches.push(
-          dispatch(
-            appointmentApi.util.updateQueryData('getAllAppointments', {}, (draft) => {
-              const appointment = draft.data?.find(a => a.id === appointmentId);
-              if (appointment) appointment.status = status;
-            })
-          )
-        );
-        
-        // Update for filtered queries (common status filters)
-        ['pending', 'confirmed', 'completed', 'cancelled'].forEach(filterStatus => {
-          patches.push(
-            dispatch(
-              appointmentApi.util.updateQueryData('getAllAppointments', { status: filterStatus }, (draft) => {
-                const appointment = draft.data?.find(a => a.id === appointmentId);
-                if (appointment) appointment.status = status;
-              })
-            )
-          );
-        });
-        
-        try {
-          await queryFulfilled;
-        } catch {
-          patches.forEach(patch => patch.undo());
-        }
-      },
-      invalidatesTags: (result, error, { appointmentId }) => [
-        { type: 'Appointment', id: appointmentId },
-        { type: 'Appointments', id: 'LIST' },
-      ],
-    }),
   }),
 });
 
 export const {
   useGetAllAppointmentsQuery,
-  useUpdateAppointmentStatusMutation,
 } = appointmentApi;

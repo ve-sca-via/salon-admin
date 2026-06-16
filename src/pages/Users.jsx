@@ -229,23 +229,16 @@ export const Users = () => {
     setSelectedUser(user);
     setEditForm({
       full_name: user.full_name || '',
-      role: user.user_role || ROLES.CUSTOMER,
       phone: user.phone || '',
     });
     setIsEditModalOpen(true);
   };
 
   const handleUpdate = async () => {
-    // Prevent changing to admin role
-    if (editForm.role === ROLES.ADMIN && selectedUser.user_role !== ROLES.ADMIN) {
-      toast.error('You cannot promote users to admin role');
-      return;
-    }
-
     try {
-      await updateUserMutation({ 
-        userId: selectedUser.id, 
-        data: editForm 
+      await updateUserMutation({
+        userId: selectedUser.id,
+        data: editForm
       }).unwrap();
       toast.success('User updated successfully');
       setIsEditModalOpen(false);
@@ -421,20 +414,9 @@ export const Users = () => {
             value={editForm.phone || ''}
             onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
           />
-          <Select
-            label="Role"
-            value={editForm.role || ROLES.CUSTOMER}
-            onChange={(e) => setEditForm({ ...editForm, role: e.target.value })}
-            options={Object.entries(ROLE_LABELS).map(([value, label]) => ({
-              value,
-              label
-            }))}
-          />
-          {editForm.role !== ROLES.ADMIN && (
-            <p className="text-sm text-gray-500">
-              Note: You cannot promote a user to Admin role
-            </p>
-          )}
+          <p className="text-sm text-gray-500">
+            Role is set at creation and can't be changed here.
+          </p>
         </div>
       </Modal>
 

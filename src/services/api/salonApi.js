@@ -42,16 +42,6 @@ export const salonApi = createApi({
       refetchOnReconnect: true,
     }),
 
-    // Get single salon details
-    getSalonById: builder.query({
-      query: (salonId) => ({
-        url: `/api/v1/admin/salons/${salonId}`,
-        method: 'get',
-      }),
-      providesTags: (result, error, id) => [{ type: 'Salon', id }],
-      keepUnusedDataFor: 300,
-    }),
-
     // Approve vendor request
     approveVendorRequest: builder.mutation({
       query: ({ requestId, adminNotes }) => ({
@@ -182,7 +172,6 @@ export const salonApi = createApi({
 export const {
   useGetAllSalonsQuery,
   useGetPendingSalonsQuery,
-  useGetSalonByIdQuery,
   useApproveVendorRequestMutation,
   useRejectVendorRequestMutation,
   useUpdateSalonMutation,
