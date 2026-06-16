@@ -92,7 +92,7 @@ export const store = configureStore({
       .concat(configApi.middleware)
       .concat(productApi.middleware)
       .concat(productOrderApi.middleware)
-      .concat(couponApi.middleware),
+      .concat(couponApi.middleware)
       .concat(bannerApi.middleware)
 });
 
