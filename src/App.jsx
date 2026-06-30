@@ -32,6 +32,7 @@ const Services = lazy(() => import('./pages/Services').then(module => ({ default
 const PendingSalons = lazy(() => import('./pages/PendingSalons'));
 const RMManagement = lazy(() => import('./pages/RMManagement').then(module => ({ default: module.RMManagement })));
 const CareerApplications = lazy(() => import('./pages/CareerApplications'));
+const PartnerRequests = lazy(() => import('./pages/PartnerRequests').then(module => ({ default: module.PartnerRequests })));
 const SystemConfig = lazy(() => import('./pages/SystemConfig').then(module => ({ default: module.SystemConfig })));
 const Products = lazy(() => import('./pages/Products'));
 const Banners = lazy(() => import('./pages/Banners'));
@@ -219,6 +220,11 @@ function AppContent() {
                 <Route path="/career-applications" element={
                   <ErrorBoundary fallback="page">
                     <CareerApplications />
+                  </ErrorBoundary>
+                } />
+                <Route path="/partner-requests" element={
+                  <ErrorBoundary fallback="page">
+                    <PartnerRequests />
                   </ErrorBoundary>
                 } />
                 <Route path="/system-config" element={
