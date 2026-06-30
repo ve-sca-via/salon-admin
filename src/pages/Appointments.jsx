@@ -97,7 +97,7 @@ export const Appointments = () => {
               )}
             </div>
             <div className="text-sm text-gray-500">
-              ${row.final_amount || row.total_amount || 0}
+              ₹{row.final_amount || row.total_amount || 0}
             </div>
           </div>
         );
@@ -227,10 +227,64 @@ export const Appointments = () => {
                 ? selectedAppointment.time_slots[0]
                 : 'N/A'}
             </p>
-            <p>
-              <strong>Amount:</strong> $
-              {selectedAppointment?.total_amount || selectedAppointment?.final_amount || 0}
-            </p>
+            {(() => {
+              const a = selectedAppointment || {};
+              const discount = Number(a.discount_amount || 0);
+              const feeDiscount = Number(a.convenience_fee_discount || 0);
+              const totalSavings = discount + feeDiscount;
+              const hasCoupon = Boolean(a.coupon_code) && totalSavings > 0;
+              const subtotal =
+                a.subtotal_service_price != null
+                  ? Number(a.subtotal_service_price)
+                  : Number(a.service_price || 0) + discount;
+              const feeBefore = Number(a.convenience_fee || 0) + feeDiscount;
+              return (
+                <div className="border-t border-gray-200 pt-2 mt-1 space-y-1">
+                  {hasCoupon && (
+                    <p className="inline-flex items-center gap-1 rounded bg-green-50 text-green-700 text-xs font-medium px-2 py-0.5">
+                      🎟 Coupon {a.coupon_code} · saved ₹{totalSavings.toFixed(2)}
+                    </p>
+                  )}
+                  {hasCoupon && discount > 0 && (
+                    <>
+                      <p className="flex justify-between">
+                        <span>Service total</span>
+                        <span className="line-through text-gray-400">₹{subtotal.toFixed(2)}</span>
+                      </p>
+                      <p className="flex justify-between text-green-600">
+                        <span>Service discount</span>
+                        <span>−₹{discount.toFixed(2)}</span>
+                      </p>
+                    </>
+                  )}
+                  <p className="flex justify-between">
+                    <span>Service amount (at salon)</span>
+                    <span>₹{Number(a.service_price || 0).toFixed(2)}</span>
+                  </p>
+                  {hasCoupon && feeDiscount > 0 ? (
+                    <>
+                      <p className="flex justify-between">
+                        <span>Convenience fee</span>
+                        <span className="line-through text-gray-400">₹{feeBefore.toFixed(2)}</span>
+                      </p>
+                      <p className="flex justify-between text-green-600">
+                        <span>Fee discount</span>
+                        <span>−₹{feeDiscount.toFixed(2)}</span>
+                      </p>
+                    </>
+                  ) : (
+                    <p className="flex justify-between">
+                      <span>Convenience fee (online)</span>
+                      <span>₹{Number(a.convenience_fee || 0).toFixed(2)}</span>
+                    </p>
+                  )}
+                  <p className="flex justify-between font-semibold text-gray-800 border-t border-gray-200 pt-1">
+                    <span>Total</span>
+                    <span>₹{Number(a.total_amount || a.final_amount || 0).toFixed(2)}</span>
+                  </p>
+                </div>
+              );
+            })()}
             <p className="flex items-center gap-2">
               <strong>Status:</strong>
               {selectedAppointment?.status ? (
