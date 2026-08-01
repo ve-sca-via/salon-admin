@@ -5,7 +5,8 @@ import {
   useGetAllSalonsQuery, 
   useUpdateSalonMutation,
   useToggleSalonStatusMutation,
-  useSendPaymentReminderMutation
+  useSendPaymentReminderMutation,
+  useResendApprovalEmailMutation
 } from '../services/api/salonApi';
 import { Table } from '../components/common/Table';
 import { Modal } from '../components/common/Modal';
@@ -67,12 +68,14 @@ const Salons = () => {
   const [selectedSalon, setSelectedSalon] = useState(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [sendingReminder, setSendingReminder] = useState(null);
+  const [resendingEmail, setResendingEmail] = useState(null);
 
   // RTK Query hooks - NOW FETCHING ALL SALONS
   const { data: salonsData, isLoading } = useGetAllSalonsQuery({});
   const [updateSalon] = useUpdateSalonMutation();
   const [toggleStatus] = useToggleSalonStatusMutation();
   const [sendPaymentReminder] = useSendPaymentReminderMutation();
+  const [resendApprovalEmail] = useResendApprovalEmailMutation();
   
   // Smart filtering based on business needs
   const filteredSalons = useMemo(() => {
@@ -177,6 +180,20 @@ const Salons = () => {
       toast.error(error?.data?.detail || 'Failed to send payment reminder');
     } finally {
       setSendingReminder(null);
+    }
+  };
+
+  const handleResendApprovalEmail = async (salon) => {
+    setResendingEmail(salon.id);
+    try {
+      await resendApprovalEmail({ requestId: salon.join_request_id }).unwrap();
+      toast.success(`Registration link sent to ${salon.email}`);
+    } catch (error) {
+      // This call is synchronous on the backend, so the message carries the
+      // actual SMTP failure instead of a generic "something went wrong".
+      toast.error(error?.data?.detail || 'Failed to send approval email');
+    } finally {
+      setResendingEmail(null);
     }
   };
 
@@ -349,6 +366,18 @@ const Salons = () => {
                 disabled={sendingReminder === salon.id}
               />
             </>
+          )}
+
+          {/* The vendor still has no account, so they never used (or never got)
+              the registration link that approval emails them. */}
+          {!salon.vendor_id && salon.join_request_id && (
+            <DropdownItem
+              icon={Mail}
+              label={resendingEmail === salon.id ? "Sending..." : "Resend Approval Email"}
+              onClick={() => handleResendApprovalEmail(salon)}
+              variant="warning"
+              disabled={resendingEmail === salon.id}
+            />
           )}
         </Dropdown>
       )
