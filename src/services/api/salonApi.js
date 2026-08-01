@@ -67,6 +67,17 @@ export const salonApi = createApi({
       invalidatesTags: ['PendingSalons', { type: 'Salons', id: 'LIST' }, 'DashboardStats', 'RecentActivity'],
     }),
 
+    // Re-send the registration-link email for an already approved request.
+    // Approval queues the email in the background, so this is how an admin
+    // retries (and sees the real SMTP error) when the vendor never got it.
+    resendApprovalEmail: builder.mutation({
+      query: ({ requestId }) => ({
+        url: `/api/v1/admin/vendor-requests/${requestId}/resend-approval-email`,
+        method: 'post',
+      }),
+      invalidatesTags: ['RecentActivity'],
+    }),
+
     // Reject vendor request
     rejectVendorRequest: builder.mutation({
       query: ({ requestId, adminNotes }) => ({
@@ -173,6 +184,7 @@ export const {
   useGetAllSalonsQuery,
   useGetPendingSalonsQuery,
   useApproveVendorRequestMutation,
+  useResendApprovalEmailMutation,
   useRejectVendorRequestMutation,
   useUpdateSalonMutation,
   useDeleteSalonMutation,

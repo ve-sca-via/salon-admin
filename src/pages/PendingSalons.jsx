@@ -153,7 +153,10 @@ export const PendingSalons = () => {
         adminNotes: notes
       }).unwrap();
 
-      toast.success(`${selectedRequest.business_name} has been approved! Registration email sent to owner.`);
+      // The registration email is dispatched after the response, so we can't claim
+      // it was delivered here. Salons > Resend Approval Email retries it and
+      // reports the real SMTP error if it didn't arrive.
+      toast.success(`${selectedRequest.business_name} has been approved! Registration email is on its way to the owner.`);
       setIsReviewModalOpen(false);
       setApprovalNotes('');
       setSelectedRequest(null);
