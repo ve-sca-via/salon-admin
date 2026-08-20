@@ -1,0 +1,238 @@
+/**
+ * Article typography — the single place blog formatting is defined.
+ *
+ * The editor produces plain semantic HTML (h2/h3/p/ul/blockquote/img/...) and
+ * this stylesheet decides how it looks. The client controls words and
+ * structure; we control the design system, so he cannot break the layout.
+ *
+ * IMPORTANT (Phase 3): this file is the CANONICAL source for the website's
+ * `.blog-prose` block. Copy it into salon-management-app so the admin Preview
+ * tab and the live article render identically — if they drift, the preview
+ * stops being a preview. Selectors are deliberately plain CSS with no Tailwind
+ * directives so it can be dropped into the other repo unchanged.
+ *
+ * Everything is set explicitly because both apps run a reset that zeroes
+ * margins on every element; inherited browser defaults are not available.
+ */
+
+.blog-prose {
+  color: #1f2937;
+  font-family: "DM Sans", system-ui, sans-serif;
+  font-size: 1.0625rem;
+  line-height: 1.75;
+  word-break: break-word;
+}
+
+/* ---------- Headings ---------- */
+/* h1 is the post title rendered by the page shell, never by the body, so the
+   article's own top level is h2. That keeps one h1 per page for SEO. */
+.blog-prose h2 {
+  font-family: "Marcellus", Georgia, serif;
+  font-size: 1.75rem;
+  line-height: 1.3;
+  font-weight: 400;
+  color: #111827;
+  margin: 2.5rem 0 1rem;
+}
+
+.blog-prose h3 {
+  font-family: "Marcellus", Georgia, serif;
+  font-size: 1.375rem;
+  line-height: 1.4;
+  font-weight: 400;
+  color: #111827;
+  margin: 2rem 0 0.75rem;
+}
+
+.blog-prose h4 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #111827;
+  margin: 1.5rem 0 0.5rem;
+}
+
+/* No leading gap when the article opens on a heading. */
+.blog-prose > :first-child {
+  margin-top: 0;
+}
+
+.blog-prose > :last-child {
+  margin-bottom: 0;
+}
+
+/* ---------- Body copy ---------- */
+.blog-prose p {
+  margin: 0 0 1.25rem;
+}
+
+.blog-prose strong,
+.blog-prose b {
+  font-weight: 600;
+  color: #111827;
+}
+
+.blog-prose em,
+.blog-prose i {
+  font-style: italic;
+}
+
+.blog-prose u {
+  text-decoration: underline;
+}
+
+.blog-prose s {
+  text-decoration: line-through;
+  color: #6b7280;
+}
+
+/* ---------- Links ---------- */
+/* Internal links into /salons and /products are how the blog transfers SEO
+   value, so they are styled to be obviously clickable. */
+.blog-prose a {
+  color: #b26e02;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.blog-prose a:hover {
+  color: #f89c02;
+}
+
+/* ---------- Lists ---------- */
+.blog-prose ul,
+.blog-prose ol {
+  margin: 0 0 1.25rem;
+  padding-left: 1.5rem;
+}
+
+.blog-prose ul {
+  list-style: disc;
+}
+
+.blog-prose ol {
+  list-style: decimal;
+}
+
+.blog-prose li {
+  margin: 0.375rem 0;
+  padding-left: 0.25rem;
+}
+
+.blog-prose li > ul,
+.blog-prose li > ol {
+  margin: 0.375rem 0 0.5rem;
+}
+
+/* ---------- Blockquote ---------- */
+.blog-prose blockquote {
+  margin: 1.75rem 0;
+  padding: 0.25rem 0 0.25rem 1.25rem;
+  border-left: 3px solid #f89c02;
+  color: #4b5563;
+  font-style: italic;
+}
+
+.blog-prose blockquote p:last-child {
+  margin-bottom: 0;
+}
+
+/* ---------- Code ---------- */
+.blog-prose code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.875em;
+  background: #f3f4f6;
+  color: #b91c1c;
+  padding: 0.125rem 0.375rem;
+  border-radius: 0.25rem;
+}
+
+.blog-prose pre {
+  margin: 1.5rem 0;
+  padding: 1rem 1.25rem;
+  background: #111827;
+  color: #f9fafb;
+  border-radius: 0.5rem;
+  overflow-x: auto;
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+
+.blog-prose pre code {
+  background: transparent;
+  color: inherit;
+  padding: 0;
+  font-size: inherit;
+}
+
+/* ---------- Media ---------- */
+.blog-prose img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 1.75rem auto;
+  border-radius: 0.5rem;
+}
+
+.blog-prose figure {
+  margin: 1.75rem 0;
+}
+
+.blog-prose figure img {
+  margin: 0 auto 0.5rem;
+}
+
+.blog-prose figcaption {
+  text-align: center;
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+/* ---------- Rules ---------- */
+.blog-prose hr {
+  margin: 2.5rem 0;
+  border: 0;
+  border-top: 1px solid #e5e7eb;
+}
+
+/* ---------- Tables ---------- */
+.blog-prose table {
+  width: 100%;
+  margin: 1.75rem 0;
+  border-collapse: collapse;
+  font-size: 0.9375rem;
+}
+
+.blog-prose th,
+.blog-prose td {
+  border: 1px solid #e5e7eb;
+  padding: 0.625rem 0.875rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+.blog-prose th {
+  background: #f9fafb;
+  font-weight: 600;
+  color: #111827;
+}
+
+/* ---------- Editor-only affordances ---------- */
+/* Applied by the TipTap wrapper, not present on the published page. */
+.blog-prose.is-editing:focus {
+  outline: none;
+}
+
+/* Placeholder text for an empty document. */
+.blog-prose.is-editing p.is-editor-empty:first-child::before {
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  color: #9ca3af;
+  pointer-events: none;
+}
+
+/* Make the selected image visible while editing. */
+.blog-prose.is-editing img.ProseMirror-selectednode {
+  outline: 3px solid #f89c02;
+  outline-offset: 2px;
+}

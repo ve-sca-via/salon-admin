@@ -19,6 +19,7 @@ import {
 
 import { MainLayout } from './components/layout/MainLayout';
 import { ProtectedRoute } from './components/layout/ProtectedRoute';
+import { FeatureRoute } from './components/layout/FeatureRoute';
 import { SkeletonStatCard } from './components/common/Skeleton';
 import ErrorBoundary from './components/common/ErrorBoundary';
 
@@ -38,6 +39,9 @@ const Products = lazy(() => import('./pages/Products'));
 const Banners = lazy(() => import('./pages/Banners'));
 const ProductOrders = lazy(() => import('./pages/ProductOrders').then(module => ({ default: module.ProductOrders })));
 const Coupons = lazy(() => import('./pages/Coupons'));
+const Blog = lazy(() => import('./pages/Blog'));
+const BlogEditor = lazy(() => import('./pages/BlogEditor'));
+const FeatureFlags = lazy(() => import('./pages/FeatureFlags'));
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'));
 
 function AppContent() {
@@ -250,6 +254,38 @@ function AppContent() {
                 <Route path="/coupons" element={
                   <ErrorBoundary fallback="page">
                     <Coupons />
+                  </ErrorBoundary>
+                } />
+                {/* Blog is feature-gated: until the 'blog' entitlement is
+                    enabled these render the 404 page for the client, and the
+                    backend answers 404 on the matching API routes. */}
+                <Route path="/blog" element={
+                  <ErrorBoundary fallback="page">
+                    <FeatureRoute feature="blog">
+                      <Blog />
+                    </FeatureRoute>
+                  </ErrorBoundary>
+                } />
+                <Route path="/blog/new" element={
+                  <ErrorBoundary fallback="page">
+                    <FeatureRoute feature="blog">
+                      <BlogEditor />
+                    </FeatureRoute>
+                  </ErrorBoundary>
+                } />
+                <Route path="/blog/:postId/edit" element={
+                  <ErrorBoundary fallback="page">
+                    <FeatureRoute feature="blog">
+                      <BlogEditor />
+                    </FeatureRoute>
+                  </ErrorBoundary>
+                } />
+                {/* Internal staff only - the switchboard for everything above. */}
+                <Route path="/feature-flags" element={
+                  <ErrorBoundary fallback="page">
+                    <FeatureRoute internalOnly>
+                      <FeatureFlags />
+                    </FeatureRoute>
                   </ErrorBoundary>
                 } />
               </Route>
