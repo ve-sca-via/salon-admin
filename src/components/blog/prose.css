@@ -216,6 +216,28 @@
   color: #111827;
 }
 
+/* A phone is narrower than almost any table the editor can produce, and the
+   editor cannot emit a wrapper element to scroll one in — `div` is not on the
+   backend's sanitiser allowlist, so there is nothing to hang an
+   `overflow-x: auto` box on. Below the breakpoint the table becomes that box
+   itself. The cell `min-width` is what makes it work: it holds the columns
+   wider than the screen, so the excess goes into this scroller instead of
+   auto-layout squeezing every column down to a couple of characters. */
+@media (max-width: 640px) {
+  .blog-prose table {
+    display: block;
+    overflow-x: auto;
+  }
+
+  .blog-prose th,
+  .blog-prose td {
+    /* Opt out of the article's break-anywhere rule. In a column this narrow it
+       split words down the middle — a "Treatment" header read "Treat / ment". */
+    word-break: normal;
+    min-width: 7.5rem;
+  }
+}
+
 /* ---------- Editor-only affordances ---------- */
 /* Applied by the TipTap wrapper, not present on the published page. */
 .blog-prose.is-editing:focus {
