@@ -16,7 +16,9 @@ import { productApi } from '../../services/api/productApi';
 import { productOrderApi } from '../../services/api/productOrderApi';
 import { couponApi } from '../../services/api/couponApi';
 import { bannerApi } from '../../services/api/bannerApi';
+import { blogApi } from '../../services/api/blogApi';
 import { useDispatch } from 'react-redux';
+import { useFeatures } from '../../hooks/useFeatures';
 
 export const Sidebar = () => {
   const location = useLocation();
@@ -25,10 +27,16 @@ export const Sidebar = () => {
   // Use RTK Query to fetch pending salons
   const { data: pendingSalonsData } = useGetPendingSalonsQuery({ limit: 100 });
   const pendingCount = pendingSalonsData?.data?.length || 0;
+
+  // Drives which gated nav items render. Cosmetic only — the backend 404s on
+  // the matching routes regardless of what the sidebar shows.
+  const { isEnabled, isInternalOnly, isInternal } = useFeatures();
   
   const [hasNewNotification, setHasNewNotification] = useState(false);
 
-  const isActive = (path) => location.pathname === path;
+  // Sub-routes (e.g. /blog/:postId/edit) keep their parent nav item highlighted.
+  const isActive = (path) =>
+    location.pathname === path || (path !== '/' && location.pathname.startsWith(`${path}/`));
 
   useEffect(() => {
     // Subscribe to real-time changes
@@ -112,6 +120,9 @@ export const Sidebar = () => {
         break;
       case '/coupons':
         dispatch(couponApi.util.prefetch('getCoupons', {}, { force: false }));
+        break;
+      case '/blog':
+        dispatch(blogApi.util.prefetch('getAllBlogPosts', {}, { force: false }));
         break;
       default:
         break;
@@ -240,6 +251,17 @@ export const Sidebar = () => {
       label: 'Coupons',
     },
     {
+      path: '/blog',
+      icon: (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+        </svg>
+      ),
+      label: 'Blog',
+      // Gated: hidden until the 'blog' feature is enabled for the client.
+      feature: 'blog',
+    },
+    {
       path: '/system-config',
       icon: (
         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -249,7 +271,27 @@ export const Sidebar = () => {
       ),
       label: 'Settings',
     },
+    {
+      path: '/feature-flags',
+      icon: (
+        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 21v-4m0 0V5a2 2 0 012-2h6.5l1 1H21l-3 6 3 6h-8.5l-1-1H5a2 2 0 00-2 2zm9-13.5V9" />
+        </svg>
+      ),
+      label: 'Feature Flags',
+      // Never flag-gated, always internal-only: a flags screen visible to the
+      // client would list every feature built but not yet sold.
+      internalOnly: true,
+    },
   ];
+
+  // Fails closed: while the feature map is loading, `isEnabled` returns false
+  // and gated items stay hidden rather than flashing into view.
+  const visibleItems = menuItems.filter((item) => {
+    if (item.internalOnly) return isInternal;
+    if (item.feature) return isEnabled(item.feature);
+    return true;
+  });
 
   return (
     <div className="flex flex-col w-64 bg-white h-screen border-r border-gray-200 shadow-sm">
@@ -260,7 +302,7 @@ export const Sidebar = () => {
 
       {/* Navigation */}
       <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-        {menuItems.map((item) => (
+        {visibleItems.map((item) => (
           <Link
             key={item.path}
             to={item.path}
@@ -279,6 +321,20 @@ export const Sidebar = () => {
               <span className={isActive(item.path) ? 'text-white' : 'text-gray-700'}>
                 {item.label}
               </span>
+              {/* Staff-only marker: this item is on screen because you are
+                  internal, and the client cannot see it. */}
+              {item.feature && isInternalOnly(item.feature) && (
+                <span
+                  title="Internal only - hidden from the client"
+                  className={`px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide rounded ${
+                    isActive(item.path)
+                      ? 'bg-white/25 text-white'
+                      : 'bg-amber-100 text-amber-800'
+                  }`}
+                >
+                  Internal
+                </span>
+              )}
             </div>
             {item.badge > 0 && (
               <span className={`px-2 py-1 text-xs font-semibold text-white rounded-full transition-all ${

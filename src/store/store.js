@@ -18,6 +18,8 @@ import { productApi } from '../services/api/productApi';
 import { productOrderApi } from '../services/api/productOrderApi';
 import { couponApi } from '../services/api/couponApi';
 import { bannerApi } from '../services/api/bannerApi';
+import { blogApi } from '../services/api/blogApi';
+import { featureApi } from '../services/api/featureApi';
 
 // Redux Persist Configuration
 const persistConfig = {
@@ -43,7 +45,9 @@ const persistConfig = {
     productApi.reducerPath,      // Product catalog - must be fresh after mutations
     productOrderApi.reducerPath, // Product orders - must be fresh
     couponApi.reducerPath,       // Coupons - must be fresh after mutations
-    bannerApi.reducerPath      // Banners - must be fresh after mutations
+    bannerApi.reducerPath,       // Banners - must be fresh after mutations
+    blogApi.reducerPath,         // Blog posts - must be fresh after mutations
+    featureApi.reducerPath       // Feature flags - a stale map would show the client a hidden feature
   ],
   // Throttle writes to localStorage (better performance)
   throttle: 1000,
@@ -64,7 +68,9 @@ const rootReducer = combineReducers({
   [productApi.reducerPath]: productApi.reducer,
   [productOrderApi.reducerPath]: productOrderApi.reducer,
   [couponApi.reducerPath]: couponApi.reducer,
-  [bannerApi.reducerPath]: bannerApi.reducer
+  [bannerApi.reducerPath]: bannerApi.reducer,
+  [blogApi.reducerPath]: blogApi.reducer,
+  [featureApi.reducerPath]: featureApi.reducer
 });
 
 // Wrap with persistReducer
@@ -98,6 +104,8 @@ export const store = configureStore({
       .concat(productOrderApi.middleware)
       .concat(couponApi.middleware)
       .concat(bannerApi.middleware)
+      .concat(blogApi.middleware)
+      .concat(featureApi.middleware)
 });
 
 // Enable refetchOnFocus/refetchOnReconnect behaviors
