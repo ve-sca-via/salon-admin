@@ -37,6 +37,9 @@ import '../components/blog/prose.css';
 const META_TITLE_MAX = 70;
 const META_DESCRIPTION_MAX = 160;
 const EXCERPT_MAX = 500;
+const FAQ_QUESTION_MAX = 300;
+const FAQ_ANSWER_MAX = 2000;
+const FAQS_MAX_ITEMS = 20;
 const AUTOSAVE_DELAY_MS = 2500;
 
 const EMPTY_FORM = {
@@ -51,6 +54,7 @@ const EMPTY_FORM = {
   focus_keyword: '',
   tags: [],
   author_name: '',
+  faqs: [],
   status: 'draft',
   published_at: '',
 };
@@ -128,6 +132,7 @@ const BlogEditor = () => {
       focus_keyword: post.focus_keyword || '',
       tags: post.tags || [],
       author_name: post.author_name || '',
+      faqs: post.faqs || [],
       status: post.status || 'draft',
       published_at: isoToLocalInput(post.published_at),
     };
@@ -173,6 +178,16 @@ const BlogEditor = () => {
     if (targetStatus === 'published' && isEmptyHtml(form.content)) {
       problems.push('Cannot publish an empty article.');
     }
+    if (form.faqs.length > FAQS_MAX_ITEMS) {
+      problems.push(`No more than ${FAQS_MAX_ITEMS} FAQs are allowed.`);
+    }
+    form.faqs.forEach((faq, index) => {
+      const hasQuestion = faq.question.trim().length > 0;
+      const hasAnswer = faq.answer.trim().length > 0;
+      if (hasQuestion !== hasAnswer) {
+        problems.push(`FAQ #${index + 1} is missing its ${hasQuestion ? 'answer' : 'question'}.`);
+      }
+    });
     return problems;
   };
 
@@ -214,6 +229,11 @@ const BlogEditor = () => {
       focus_keyword: form.focus_keyword.trim(),
       tags: form.tags,
       author_name: form.author_name.trim(),
+      // Rows left fully blank (an added-then-abandoned FAQ) are dropped
+      // silently; a half-filled one is caught earlier by validate().
+      faqs: form.faqs
+        .map((faq) => ({ question: faq.question.trim(), answer: faq.answer.trim() }))
+        .filter((faq) => faq.question && faq.answer),
       status: targetStatus,
     };
 
@@ -429,6 +449,30 @@ const BlogEditor = () => {
   };
 
   // =====================================================
+  // FAQs
+  // =====================================================
+  const addFaq = () =>
+    setForm((prev) => ({ ...prev, faqs: [...prev.faqs, { question: '', answer: '' }] }));
+
+  const updateFaq = (index, field, value) =>
+    setForm((prev) => ({
+      ...prev,
+      faqs: prev.faqs.map((faq, i) => (i === index ? { ...faq, [field]: value } : faq)),
+    }));
+
+  const removeFaq = (index) =>
+    setForm((prev) => ({ ...prev, faqs: prev.faqs.filter((_, i) => i !== index) }));
+
+  const moveFaq = (index, direction) =>
+    setForm((prev) => {
+      const target = index + direction;
+      if (target < 0 || target >= prev.faqs.length) return prev;
+      const faqs = [...prev.faqs];
+      [faqs[index], faqs[target]] = [faqs[target], faqs[index]];
+      return { ...prev, faqs };
+    });
+
+  // =====================================================
   // EARLY RETURNS
   // =====================================================
   if (!isNew && isLoading) {
@@ -570,6 +614,75 @@ const BlogEditor = () => {
             onUploadImage={handleBodyImageUpload}
             placeholder="Write the article. Use H2 for sections, and link to /salons or /products where it helps the reader."
           />
+
+          <Card title="FAQs">
+            <div className="space-y-4">
+              <p className="text-sm text-gray-500">
+                Shown as a collapsible list at the bottom of the article, and included in the
+                page&apos;s search-result rich snippet. Leave empty if this post has none.
+              </p>
+
+              {form.faqs.map((faq, index) => (
+                <div key={index} className="space-y-3 rounded-lg border border-gray-200 p-4">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs font-medium text-gray-400">FAQ #{index + 1}</span>
+                    <div className="flex gap-1">
+                      <button
+                        type="button"
+                        onClick={() => moveFaq(index, -1)}
+                        disabled={index === 0}
+                        aria-label="Move FAQ up"
+                        className="rounded border border-gray-300 px-2 py-1 text-xs text-gray-600 hover:bg-gray-50 disabled:opacity-30"
+                      >
+                        ↑
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => moveFaq(index, 1)}
+                        disabled={index === form.faqs.length - 1}
+                        aria-label="Move FAQ down"
+                        className="rounded border border-gray-300 px-2 py-1 text-xs text-gray-600 hover:bg-gray-50 disabled:opacity-30"
+                      >
+                        ↓
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => removeFaq(index)}
+                        aria-label="Remove FAQ"
+                        className="rounded border border-red-300 px-2 py-1 text-xs text-red-600 hover:bg-red-50"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                  <Input
+                    label="Question"
+                    value={faq.question}
+                    maxLength={FAQ_QUESTION_MAX}
+                    onChange={(e) => updateFaq(index, 'question', e.target.value)}
+                    placeholder="e.g. How often should I get a hair spa?"
+                  />
+                  <Textarea
+                    label="Answer"
+                    rows={3}
+                    value={faq.answer}
+                    maxLength={FAQ_ANSWER_MAX}
+                    onChange={(e) => updateFaq(index, 'answer', e.target.value)}
+                    placeholder="Answer shown when the question is expanded"
+                  />
+                </div>
+              ))}
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={addFaq}
+                disabled={form.faqs.length >= FAQS_MAX_ITEMS}
+              >
+                + Add FAQ
+              </Button>
+            </div>
+          </Card>
         </div>
       )}
 
@@ -606,6 +719,27 @@ const BlogEditor = () => {
               // published page uses. The stored copy is sanitised server-side
               // before it is ever served to the public.
               <div className="blog-prose" dangerouslySetInnerHTML={{ __html: form.content }} />
+            )}
+
+            {form.faqs.some((faq) => faq.question.trim() && faq.answer.trim()) && (
+              <div className="mt-10">
+                <h2 className="text-2xl text-gray-900 font-[Marcellus,Georgia,serif]">
+                  Frequently asked questions
+                </h2>
+                <div className="mt-4 divide-y divide-gray-200 border-y border-gray-200">
+                  {form.faqs
+                    .filter((faq) => faq.question.trim() && faq.answer.trim())
+                    .map((faq, index) => (
+                      <details key={index} className="group py-4">
+                        <summary className="flex cursor-pointer list-none items-center justify-between gap-4 font-medium text-gray-900">
+                          {faq.question}
+                          <span className="shrink-0 text-gray-400 group-open:rotate-45">+</span>
+                        </summary>
+                        <p className="mt-3 text-sm leading-relaxed text-gray-600">{faq.answer}</p>
+                      </details>
+                    ))}
+                </div>
+              </div>
             )}
           </div>
         </Card>
