@@ -190,6 +190,50 @@ describe('new post', () => {
     expect(mockNavigate).toHaveBeenCalledWith('/blog/new-1/edit', { replace: true });
   });
 
+  it('adds an FAQ and includes it in the save payload', async () => {
+    const user = userEvent.setup();
+    renderEditor();
+
+    await user.type(screen.getByLabelText('Title'), 'Hair Spa Guide');
+    await user.type(screen.getByLabelText('Article body'), '<p>Body</p>');
+    await user.click(screen.getByRole('button', { name: '+ Add FAQ' }));
+    await user.type(screen.getByLabelText('Question'), 'How often should I get a hair spa?');
+    await user.type(screen.getByLabelText('Answer'), 'Every 4-6 weeks.');
+    await user.click(screen.getByRole('button', { name: 'Save draft' }));
+
+    await waitFor(() => expect(requests).toHaveLength(1));
+    expect(requests[0].body.faqs).toEqual([
+      { question: 'How often should I get a hair spa?', answer: 'Every 4-6 weeks.' },
+    ]);
+  });
+
+  it('drops a fully blank FAQ row on save instead of erroring', async () => {
+    const user = userEvent.setup();
+    renderEditor();
+
+    await user.type(screen.getByLabelText('Title'), 'Hair Spa Guide');
+    await user.type(screen.getByLabelText('Article body'), '<p>Body</p>');
+    await user.click(screen.getByRole('button', { name: '+ Add FAQ' }));
+    await user.click(screen.getByRole('button', { name: 'Save draft' }));
+
+    await waitFor(() => expect(requests).toHaveLength(1));
+    expect(requests[0].body.faqs).toEqual([]);
+  });
+
+  it('blocks save when a FAQ has a question but no answer', async () => {
+    const user = userEvent.setup();
+    renderEditor();
+
+    await user.type(screen.getByLabelText('Title'), 'Hair Spa Guide');
+    await user.type(screen.getByLabelText('Article body'), '<p>Body</p>');
+    await user.click(screen.getByRole('button', { name: '+ Add FAQ' }));
+    await user.type(screen.getByLabelText('Question'), 'Unanswered question?');
+    await user.click(screen.getByRole('button', { name: 'Save draft' }));
+
+    expect(toast.error).toHaveBeenCalledWith('FAQ #1 is missing its answer.');
+    expect(requests).toHaveLength(0);
+  });
+
   it('refuses to save without a title', async () => {
     const user = userEvent.setup();
     renderEditor();
