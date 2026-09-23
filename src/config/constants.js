@@ -21,11 +21,13 @@ export const ROLE_LABELS = {
 // Roles that admin can create (admin cannot create other admins)
 export const CREATABLE_ROLES = [ROLES.RELATIONSHIP_MANAGER];
 
-// Appointment Statuses
+// Appointment Statuses.
+// These must stay in step with the backend's `booking_status` Postgres enum --
+// filtering by a label it doesn't have fails the query outright. There is no
+// 'in_progress' state; it used to be offered here and returned a 500.
 export const APPOINTMENT_STATUS = {
   PENDING: 'pending',
   CONFIRMED: 'confirmed',
-  IN_PROGRESS: 'in_progress',
   COMPLETED: 'completed',
   CANCELLED: 'cancelled',
   NO_SHOW: 'no_show'
