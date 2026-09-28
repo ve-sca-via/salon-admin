@@ -156,7 +156,6 @@ export const Appointments = () => {
               { value: '', label: 'All Statuses' },
               { value: APPOINTMENT_STATUS.PENDING, label: 'Pending' },
               { value: APPOINTMENT_STATUS.CONFIRMED, label: 'Confirmed' },
-              { value: APPOINTMENT_STATUS.IN_PROGRESS, label: 'In Progress' },
               { value: APPOINTMENT_STATUS.COMPLETED, label: 'Completed' },
               { value: APPOINTMENT_STATUS.CANCELLED, label: 'Cancelled' },
               { value: APPOINTMENT_STATUS.NO_SHOW, label: 'No Show' },
