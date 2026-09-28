@@ -16,6 +16,7 @@ import { toast } from 'react-toastify';
 import { ROLES, ROLE_LABELS, CREATABLE_ROLES } from '../config/constants';
 import { usePagination } from '../hooks/usePagination';
 import { buildTablePagination } from '../utils/pagination';
+import { MOBILE_LENGTH, mobileError, toLocalMobile } from '../utils/phone';
 
 export const Users = () => {
   // RTK Query hooks
@@ -54,6 +55,7 @@ export const Users = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
   const [editForm, setEditForm] = useState({});
+  const [editErrors, setEditErrors] = useState({});
   const [createForm, setCreateForm] = useState({
     email: '',
     password: '',
@@ -153,9 +155,12 @@ export const Users = () => {
       errors.gender = 'Gender is required';
     }
 
-    // Phone validation (if provided)
-    if (createForm.phone && createForm.phone.length < 10) {
-      errors.phone = 'Phone number must be at least 10 digits';
+    // Phone validation (optional field, but exactly 10 digits when given).
+    // "At least 10" used to let 11+ digits through to profiles.phone, whose own
+    // CHECK allows up to 15 - so an RM could be saved with an unreachable number.
+    const phoneError = mobileError(createForm.phone);
+    if (phoneError) {
+      errors.phone = phoneError;
     }
 
     // Role validation
@@ -229,12 +234,21 @@ export const Users = () => {
     setSelectedUser(user);
     setEditForm({
       full_name: user.full_name || '',
-      phone: user.phone || '',
+      // Stored numbers are E.164 (+919876543210); edit them as the 10 digits the
+      // admin typed, and let the backend normalise on the way back.
+      phone: toLocalMobile(user.phone),
     });
+    setEditErrors({});
     setIsEditModalOpen(true);
   };
 
   const handleUpdate = async () => {
+    const phoneError = mobileError(editForm.phone);
+    if (phoneError) {
+      setEditErrors({ phone: phoneError });
+      return;
+    }
+
     try {
       await updateUserMutation({
         userId: selectedUser.id,
@@ -411,8 +425,16 @@ export const Users = () => {
           />
           <Input
             label="Phone"
+            type="tel"
+            inputMode="numeric"
+            maxLength={MOBILE_LENGTH}
             value={editForm.phone || ''}
-            onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+            onChange={(e) => {
+              setEditForm({ ...editForm, phone: toLocalMobile(e.target.value) });
+              if (editErrors.phone) setEditErrors({});
+            }}
+            placeholder="10-digit mobile number"
+            error={editErrors.phone}
           />
           <p className="text-sm text-gray-500">
             Role is set at creation and can't be changed here.
@@ -582,18 +604,22 @@ export const Users = () => {
               <Input
                 label="Phone Number"
                 type="tel"
+                inputMode="numeric"
+                maxLength={MOBILE_LENGTH}
                 value={createForm.phone}
                 onChange={(e) => {
-                  setCreateForm({ ...createForm, phone: e.target.value });
+                  // Keep only digits and cap at 10, so the field cannot hold a
+                  // number the backend will refuse.
+                  setCreateForm({ ...createForm, phone: toLocalMobile(e.target.value) });
                   if (formErrors.phone) {
                     setFormErrors({ ...formErrors, phone: undefined });
                   }
                 }}
-                placeholder="Enter phone number (optional)"
+                placeholder="10-digit mobile number (optional)"
                 error={formErrors.phone}
               />
               <p className="text-xs text-gray-500 -mt-2">
-                Optional, but recommended for better communication
+                Optional, but recommended for better communication. 10 digits, no country code.
               </p>
 
               <Input
