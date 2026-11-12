@@ -69,6 +69,8 @@ const Salons = () => {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [sendingReminder, setSendingReminder] = useState(null);
   const [resendingEmail, setResendingEmail] = useState(null);
+  const [feeInput, setFeeInput] = useState('');
+  const [savingFee, setSavingFee] = useState(false);
 
   // RTK Query hooks - NOW FETCHING ALL SALONS
   const { data: salonsData, isLoading } = useGetAllSalonsQuery({});
@@ -199,7 +201,33 @@ const Salons = () => {
 
   const openDetailModal = (salon) => {
     setSelectedSalon(salon);
+    setFeeInput(
+      salon.custom_registration_fee_amount === null || salon.custom_registration_fee_amount === undefined
+        ? ''
+        : String(salon.custom_registration_fee_amount)
+    );
     setIsDetailModalOpen(true);
+  };
+
+  const handleSaveCustomFee = async () => {
+    setSavingFee(true);
+    try {
+      const value = feeInput === '' ? null : Number(feeInput);
+      await updateSalon({
+        salonId: selectedSalon.id,
+        data: { custom_registration_fee_amount: value }
+      }).unwrap();
+      setSelectedSalon((prev) => prev && { ...prev, custom_registration_fee_amount: value });
+      toast.success(
+        value === null
+          ? 'Custom fee cleared - this account now uses the default registration fee'
+          : `Custom registration fee set to ₹${value}`
+      );
+    } catch (error) {
+      toast.error(error?.data?.detail || 'Failed to update custom fee');
+    } finally {
+      setSavingFee(false);
+    }
   };
 
   // Table columns - BUSINESS-FOCUSED, NOT DEV-FOCUSED
@@ -691,6 +719,37 @@ const Salons = () => {
                   )}
                   <span className="text-sm font-medium">{selectedSalon.registration_fee_paid ? 'Payment Complete' : 'Payment Pending'}</span>
                 </div>
+              </div>
+
+              <div className="mt-4">
+                <label htmlFor="customFeeInput" className="block text-sm font-medium text-gray-700 mb-1">
+                  Custom Registration Fee
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    id="customFeeInput"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={feeInput}
+                    onChange={(e) => setFeeInput(e.target.value)}
+                    placeholder={`Default (${selectedSalon.salon_type === 'regular_buyer' ? 'regular buyer' : 'vendor'} fee)`}
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    disabled={selectedSalon.registration_fee_paid}
+                  />
+                  <Button
+                    size="sm"
+                    onClick={handleSaveCustomFee}
+                    disabled={savingFee || selectedSalon.registration_fee_paid}
+                  >
+                    {savingFee ? 'Saving...' : 'Save'}
+                  </Button>
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  {selectedSalon.registration_fee_paid
+                    ? 'Fee already paid - can no longer be changed.'
+                    : 'Leave blank to use the platform default. Enter 0 to waive the fee for this account.'}
+                </p>
               </div>
             </div>
 

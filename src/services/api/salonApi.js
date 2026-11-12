@@ -44,10 +44,16 @@ export const salonApi = createApi({
 
     // Approve vendor request
     approveVendorRequest: builder.mutation({
-      query: ({ requestId, adminNotes }) => ({
+      query: ({ requestId, adminNotes, customRegistrationFeeAmount }) => ({
         url: `/api/v1/admin/vendor-requests/${requestId}/approve`,
         method: 'post',
-        data: { admin_notes: adminNotes },
+        data: {
+          admin_notes: adminNotes,
+          custom_registration_fee_amount:
+            customRegistrationFeeAmount === '' || customRegistrationFeeAmount === undefined
+              ? null
+              : Number(customRegistrationFeeAmount),
+        },
       }),
       // Optimistically remove from pending list
       async onQueryStarted({ requestId }, { dispatch, queryFulfilled }) {

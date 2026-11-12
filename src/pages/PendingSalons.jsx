@@ -77,6 +77,7 @@ export const PendingSalons = () => {
   const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
   const [rejectionReason, setRejectionReason] = useState('');
   const [approvalNotes, setApprovalNotes] = useState('');
+  const [customFee, setCustomFee] = useState('');
   const [processing, setProcessing] = useState(false);
   const { user } = useSelector((state) => state.auth);
 
@@ -150,15 +151,22 @@ export const PendingSalons = () => {
       
       await approveRequest({
         requestId: selectedRequest.id,
-        adminNotes: notes
+        adminNotes: notes,
+        customRegistrationFeeAmount: customFee
       }).unwrap();
 
-      // The registration email is dispatched after the response, so we can't claim
-      // it was delivered here. Salons > Resend Approval Email retries it and
-      // reports the real SMTP error if it didn't arrive.
-      toast.success(`${selectedRequest.business_name} has been approved! Registration email is on its way to the owner.`);
+      // A regular_buyer's account is created right here, synchronously - there's no
+      // emailed link and no self-service activation step for that role anymore.
+      // Everyone else still gets the emailed registration link, dispatched after the
+      // response, so we can't claim it was delivered here. Salons > Resend Approval
+      // Email retries it and reports the real SMTP error if it didn't arrive.
+      const successMessage = selectedRequest.request_type === 'regular_buyer'
+        ? `${selectedRequest.business_name} has been approved! The buyer's account is active - they can log in with their phone number.`
+        : `${selectedRequest.business_name} has been approved! Registration email is on its way to the owner.`;
+      toast.success(successMessage);
       setIsReviewModalOpen(false);
       setApprovalNotes('');
+      setCustomFee('');
       setSelectedRequest(null);
     } catch (error) {
       toast.error(error?.data?.detail || 'Failed to approve salon submission');
@@ -194,6 +202,10 @@ export const PendingSalons = () => {
 
   const openReviewModal = (request) => {
     setSelectedRequest(request);
+    // Start every review blank: a fee typed for one request and then cancelled
+    // must never carry over and be applied to a different account.
+    setCustomFee('');
+    setApprovalNotes('');
     setIsReviewModalOpen(true);
   };
 
@@ -218,7 +230,9 @@ export const PendingSalons = () => {
           </div>
           <div className="text-xs text-gray-500 capitalize">{row.business_type?.replace(/_/g, ' ')}</div>
           <div className="text-sm text-gray-600 mt-1">{row.owner_name}</div>
-          <div className="text-xs text-gray-500">{row.owner_email}</div>
+          <div className="text-xs text-gray-500">
+            {row.owner_email || 'No email — activates via phone'}
+          </div>
         </div>
       ),
     },
@@ -371,7 +385,9 @@ export const PendingSalons = () => {
                 </div>
                 <div>
                   <p className="text-sm text-gray-600">Owner Email</p>
-                  <p className="font-medium">{selectedRequest.owner_email}</p>
+                  <p className="font-medium">
+                    {selectedRequest.owner_email || 'No email — buyer will activate via phone'}
+                  </p>
                 </div>
                 <div>
                   <p className="text-sm text-gray-600">Owner Phone</p>
@@ -757,6 +773,26 @@ export const PendingSalons = () => {
                   </div>
                 )}
               </div>
+            </div>
+
+            {/* Custom Registration Fee (Optional) */}
+            <div>
+              <label htmlFor="customFee" className="block text-sm font-medium text-gray-700 mb-2">
+                Custom Registration Fee (Optional)
+              </label>
+              <input
+                id="customFee"
+                type="number"
+                min="0"
+                step="0.01"
+                value={customFee}
+                onChange={(e) => setCustomFee(e.target.value)}
+                placeholder="Leave blank to use the default fee"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Overrides the default {selectedRequest.request_type === 'regular_buyer' ? 'regular buyer' : 'vendor'} registration fee for this account only. Enter 0 to waive it. Editable later from Salons.
+              </p>
             </div>
 
             {/* Admin Notes (Optional) */}
