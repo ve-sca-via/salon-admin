@@ -15,8 +15,13 @@ import {
   isInactivityExpired,
   isJwtExpired,
 } from '../../utils/session';
+import { CLIENT_HEADERS } from './clientHeaders';
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
+
+// Auth calls bypass the RTK axios instance, so they get their own client that
+// still identifies as the admin panel.
+const http = axios.create({ headers: { ...CLIENT_HEADERS } });
 
 /**
  * Login with email and password
@@ -26,7 +31,7 @@ const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
  */
 export const login = async (email, password) => {
   try {
-    const response = await axios.post(`${BACKEND_URL}/api/v1/auth/login`, {
+    const response = await http.post(`${BACKEND_URL}/api/v1/auth/login`, {
       email,
       password,
     });
@@ -71,7 +76,7 @@ export const logout = async () => {
     
     if (token) {
       // Call backend logout endpoint
-      await axios.post(
+      await http.post(
         `${BACKEND_URL}/api/v1/auth/logout`,
         {},
         {
@@ -98,7 +103,7 @@ export const getCurrentUser = async () => {
       throw new Error('No access token found');
     }
 
-    const response = await axios.get(`${BACKEND_URL}/api/v1/auth/me`, {
+    const response = await http.get(`${BACKEND_URL}/api/v1/auth/me`, {
       headers: { Authorization: `Bearer ${token}` },
     });
 
@@ -129,7 +134,7 @@ export const refreshToken = async () => {
       throw new Error('No refresh token found');
     }
 
-    const response = await axios.post(`${BACKEND_URL}/api/v1/auth/refresh`, {
+    const response = await http.post(`${BACKEND_URL}/api/v1/auth/refresh`, {
       refresh_token,
     });
 

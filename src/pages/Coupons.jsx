@@ -131,7 +131,17 @@ const Coupons = () => {
     setSelectedCoupon(null);
   };
 
-  const updateField = (field, value) => setForm((prev) => ({ ...prev, [field]: value }));
+  const updateField = (field, value) => setForm((prev) => {
+    const next = { ...prev, [field]: value };
+    // Product coupons are always platform-wide — there's no vendor-owned
+    // product catalog to scope one to (backend enforces the same rule).
+    if (field === 'applies_to' && value === 'product') {
+      next.scope = 'platform';
+      next.salon_id = '';
+      if (next.first_time_scope === 'vendor') next.first_time_scope = '';
+    }
+    return next;
+  });
 
   // ---- Validation (mirror server constraints — §7 of spec) ----
   const formErrors = useMemo(() => {
@@ -308,7 +318,9 @@ const Coupons = () => {
     {
       header: 'Applies to',
       cell: (row) => (
-        <Badge variant="default">{row.applies_to === 'service' ? 'Service' : 'Fee'}</Badge>
+        <Badge variant="default">
+          {{ service: 'Service', convenience_fee: 'Fee', product: 'Product' }[row.applies_to] || row.applies_to}
+        </Badge>
       ),
     },
     {
@@ -379,17 +391,20 @@ const Coupons = () => {
         />
       </div>
 
-      {/* Scope (immutable on edit) */}
+      {/* Scope (immutable on edit; forced platform for product coupons) */}
       <Select
         label="Scope"
         value={form.scope}
         onChange={(e) => updateField('scope', e.target.value)}
-        disabled={isEdit}
+        disabled={isEdit || form.applies_to === 'product'}
         options={[
           { value: 'platform', label: 'Platform-wide (any salon)' },
           { value: 'vendor', label: 'Specific salon' },
         ]}
       />
+      {form.applies_to === 'product' && (
+        <p className="text-xs text-gray-500 -mt-2">Product coupons are always platform-wide.</p>
+      )}
       {form.scope === 'vendor' && (
         <Select
           label="Salon *"
@@ -426,6 +441,7 @@ const Coupons = () => {
         options={[
           { value: 'service', label: 'Service price (pay at salon)' },
           { value: 'convenience_fee', label: 'Convenience fee (pay now)' },
+          { value: 'product', label: 'Product order (checkout)' },
         ]}
       />
 
@@ -479,7 +495,10 @@ const Coupons = () => {
         value={form.first_time_scope}
         onChange={(e) => updateField('first_time_scope', e.target.value)}
         disabled={isEdit}
-        options={[
+        options={form.applies_to === 'product' ? [
+          { value: '', label: 'Anyone' },
+          { value: 'platform', label: 'First product order' },
+        ] : [
           { value: '', label: 'Anyone' },
           { value: 'platform', label: 'First booking on platform' },
           { value: 'vendor', label: 'First booking at this salon' },
