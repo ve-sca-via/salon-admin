@@ -51,9 +51,31 @@ describe('approveVendorRequest', () => {
 
     expect(path).toBe('/api/v1/admin/vendor-requests/r1/approve');
     expect(method).toBe('POST');
-    expect(body).toEqual({ admin_notes: 'Looks good' });
+    // No fee entered -> null, meaning "use the default fee for this account type".
+    expect(body).toEqual({ admin_notes: 'Looks good', custom_registration_fee_amount: null });
     expect(res.data.success).toBe(true);
     expect(res.data.data.salon_id).toBe('s1');
+  });
+
+  it.each([
+    ['1500', 1500],
+    ['0', 0], // 0 waives the fee; must not be treated as "blank"
+  ])('sends a custom registration fee of %s as a number', async (input, expected) => {
+    let body = null;
+    server.use(
+      http.post(`${BASE}/vendor-requests/:id/approve`, async ({ request }) => {
+        body = await request.json();
+        return HttpResponse.json({ success: true, message: 'ok', data: { salon_id: 's1' } });
+      })
+    );
+
+    await store.dispatch(
+      salonApi.endpoints.approveVendorRequest.initiate({
+        requestId: 'r1', adminNotes: '', customRegistrationFeeAmount: input,
+      })
+    );
+
+    expect(body.custom_registration_fee_amount).toBe(expected);
   });
 });
 

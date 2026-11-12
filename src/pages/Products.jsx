@@ -4,7 +4,7 @@
  * CRUD management for e-commerce products:
  * - Table with search, category filter, featured filter
  * - Create / Edit modal with image URL inputs
- * - Toggle active/featured, soft-delete
+ * - Toggle active/featured
  *
  * Follows the same patterns as Services.jsx (Card, Table, Modal, Badge, Button)
  */
@@ -15,7 +15,6 @@ import {
   useGetProductCategoriesQuery,
   useCreateProductMutation,
   useUpdateProductMutation,
-  useDeleteProductMutation,
   useUploadProductImageMutation,
 } from '../services/api/productApi';
 import { Card } from '../components/common/Card';
@@ -24,6 +23,7 @@ import { Input, Textarea } from '../components/common/FormElements';
 import { Table } from '../components/common/Table';
 import { Modal } from '../components/common/Modal';
 import { Badge } from '../components/common/Badge';
+import { Dropdown, DropdownItem, DropdownTrigger } from '../components/common/Dropdown';
 import { toast } from 'react-toastify';
 import { usePagination } from '../hooks/usePagination';
 import { buildTablePagination } from '../utils/pagination';
@@ -77,7 +77,6 @@ const Products = () => {
   const { data: categoriesData } = useGetProductCategoriesQuery();
   const [createProduct, { isLoading: isCreating }] = useCreateProductMutation();
   const [updateProduct, { isLoading: isUpdating }] = useUpdateProductMutation();
-  const [deleteProduct] = useDeleteProductMutation();
   const [uploadImage] = useUploadProductImageMutation();
 
   const products = productsData?.products || [];
@@ -318,18 +317,6 @@ const Products = () => {
     }
   };
 
-  const handleDelete = async (product) => {
-    if (!window.confirm(`Are you sure you want to delete "${product.name}"? This will deactivate the product.`)) return;
-    try {
-      await deleteProduct({ productId: product.id }).unwrap();
-      toast.success('Product deleted successfully');
-    } catch (error) {
-      const msg = error?.data?.detail || error?.data?.message || 'Failed to delete product';
-      toast.error(msg, { autoClose: 6000 });
-    }
-  };
-
-
   // =====================================================
   // TABLE COLUMNS
   // =====================================================
@@ -409,16 +396,19 @@ const Products = () => {
     {
       header: 'Actions',
       cell: (row) => (
-        <div className="flex flex-wrap gap-1.5">
-          <Button size="sm" variant="outline" onClick={() => handleOpenEdit(row)}>Edit</Button>
-          <Button size="sm" variant={row.is_active ? 'warning' : 'success'} onClick={() => handleToggleActive(row)}>
-            {row.is_active ? 'Deactivate' : 'Activate'}
-          </Button>
-          <Button size="sm" variant={row.is_featured ? 'outline' : 'primary'} onClick={() => handleToggleFeatured(row)}>
-            {row.is_featured ? '★ Unfeature' : '☆ Feature'}
-          </Button>
-          <Button size="sm" variant="danger" onClick={() => handleDelete(row)}>Delete</Button>
-        </div>
+        <Dropdown trigger={<DropdownTrigger />}>
+          <DropdownItem label="Edit" onClick={() => handleOpenEdit(row)} />
+          <DropdownItem
+            label={row.is_active ? 'Deactivate' : 'Activate'}
+            variant={row.is_active ? 'warning' : 'success'}
+            onClick={() => handleToggleActive(row)}
+          />
+          <DropdownItem
+            label={row.is_featured ? '★ Unfeature' : '☆ Feature'}
+            variant={row.is_featured ? 'default' : 'primary'}
+            onClick={() => handleToggleFeatured(row)}
+          />
+        </Dropdown>
       ),
     },
   ];
@@ -685,33 +675,90 @@ const Products = () => {
 
       {/* Filters */}
       <Card>
-        <div className="flex flex-col sm:flex-row gap-3 p-4">
-          <input
-            type="text"
-            placeholder="Search products..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none"
-          />
-          <select
-            value={categoryFilter}
-            onChange={(e) => setCategoryFilter(e.target.value)}
-            className="rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none"
-          >
-            <option value="">All Categories</option>
-            {categories.map((cat) => (
-              <option key={cat} value={cat}>{cat}</option>
+        <div className="p-4 flex flex-wrap items-center gap-x-6 gap-y-3">
+          {/* Search */}
+          <div className="relative w-full sm:w-64 shrink-0">
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z" />
+            </svg>
+            <input
+              type="text"
+              placeholder="Search products..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full rounded-md border border-gray-300 pl-9 pr-3 py-2 text-sm focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none"
+            />
+          </div>
+
+          <div className="hidden sm:block w-px self-stretch bg-gray-200" />
+
+          {/* Featured chips */}
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs font-medium text-gray-500">Show</span>
+            {[
+              { label: 'All Products', value: '' },
+              { label: 'Featured', value: 'true' },
+              { label: 'Non-Featured', value: 'false' },
+            ].map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => setFeaturedFilter(opt.value)}
+                className={`px-3 py-1.5 rounded-full text-xs font-medium border whitespace-nowrap transition-colors ${
+                  featuredFilter === opt.value
+                    ? 'bg-orange-500 text-white border-orange-500'
+                    : 'bg-white text-gray-600 border-gray-300 hover:border-orange-400 hover:text-orange-600'
+                }`}
+              >
+                {opt.label}
+              </button>
             ))}
-          </select>
-          <select
-            value={featuredFilter}
-            onChange={(e) => setFeaturedFilter(e.target.value)}
-            className="rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-orange-500 focus:ring-1 focus:ring-orange-500 outline-none"
-          >
-            <option value="">All Products</option>
-            <option value="true">Featured Only</option>
-            <option value="false">Non-Featured</option>
-          </select>
+          </div>
+
+          {categories.length > 0 && <div className="hidden sm:block w-px self-stretch bg-gray-200" />}
+
+          {/* Category chips */}
+          {categories.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-medium text-gray-500">Category</span>
+              <button
+                type="button"
+                onClick={() => setCategoryFilter('')}
+                className={`px-3 py-1.5 rounded-full text-xs font-medium border whitespace-nowrap transition-colors ${
+                  categoryFilter === ''
+                    ? 'bg-gray-900 text-white border-gray-900'
+                    : 'bg-white text-gray-600 border-gray-300 hover:border-gray-400'
+                }`}
+              >
+                All
+              </button>
+              {categories.map((cat) => (
+                <button
+                  key={cat}
+                  type="button"
+                  onClick={() => setCategoryFilter(cat)}
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium border capitalize whitespace-nowrap transition-colors ${
+                    categoryFilter === cat
+                      ? 'bg-gray-900 text-white border-gray-900'
+                      : 'bg-white text-gray-600 border-gray-300 hover:border-gray-400'
+                  }`}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Clear filters */}
+          {(searchQuery || categoryFilter || featuredFilter) && (
+            <button
+              type="button"
+              onClick={() => { setSearchQuery(''); setCategoryFilter(''); setFeaturedFilter(''); }}
+              className="ml-auto text-xs font-medium text-orange-600 hover:text-orange-700 underline whitespace-nowrap"
+            >
+              Clear all filters
+            </button>
+          )}
         </div>
       </Card>
 
