@@ -6,12 +6,14 @@
 import axios from 'axios';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import { clearAuthStorage, syncTokenExpiryFromJwt, touchActivity } from '../../utils/session';
+import { CLIENT_HEADERS } from './clientHeaders';
 
 const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
 
 const axiosInstance = axios.create({
   baseURL: BACKEND_URL,
   timeout: 30000, // 30 seconds
+  headers: { ...CLIENT_HEADERS },
 });
 
 // =====================================================
