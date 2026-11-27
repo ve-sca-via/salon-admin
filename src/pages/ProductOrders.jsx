@@ -1,7 +1,10 @@
 import { useState } from 'react';
-import { 
-  useGetAllProductOrdersQuery, 
-  useUpdateProductOrderStatusMutation 
+import {
+  useGetAllProductOrdersQuery,
+  useUpdateProductOrderStatusMutation,
+  useUpdateProductOrderShipmentMutation,
+  useGetProductOrderEventsQuery,
+  useMarkProductOrderRefundedMutation,
 } from '../services/api/productOrderApi';
 import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
@@ -14,34 +17,148 @@ import { toast } from 'react-toastify';
 import { usePagination } from '../hooks/usePagination';
 import { paginateClient, buildTablePagination } from '../utils/pagination';
 
+// Mirrors ALLOWED_TRANSITIONS in backend product_order_service.py. `paid` is
+// only ever set by the payment flow, so it is never offered here.
+const NEXT_STATUSES = {
+  pending: ['cancelled'],
+  paid: ['shipped', 'delivered', 'cancelled'],
+  shipped: ['delivered', 'cancelled'],
+  delivered: [],
+  cancelled: [],
+};
+
+const ORDER_STATUS_OPTIONS = [
+  { value: 'pending', label: 'Pending' },
+  { value: 'paid', label: 'Paid' },
+  { value: 'shipped', label: 'Shipped' },
+  { value: 'delivered', label: 'Delivered' },
+  { value: 'cancelled', label: 'Cancelled' },
+];
+
+const STATUS_LABELS = Object.fromEntries(ORDER_STATUS_OPTIONS.map((o) => [o.value, o.label]));
+
+// Courier events from the delivery webhook (backend delivery_webhook_service.py).
+const EVENT_LABELS = {
+  shipment_updated: 'Tracking details updated',
+  manifested: 'Shipment booked',
+  picked_up: 'Picked up by courier',
+  in_transit: 'In transit',
+  out_for_delivery: 'Out for delivery',
+  delivery_failed: 'Delivery attempt failed',
+  delivered: 'Delivered',
+  rto_initiated: 'Returning to warehouse',
+  rto_delivered: 'Returned to warehouse',
+  shipment_cancelled: 'Shipment cancelled by courier',
+  // Payment events (backend ProductOrderService._settle_payment).
+  paid_after_cancel: 'Payment received after cancellation: refund it in Razorpay',
+  refunded: 'Marked refunded',
+};
+
+/** A cancelled order whose payment went through and hasn't been refunded yet. */
+const isRefundOwed = (order) => order?.status === 'cancelled' && order?.payment_status === 'completed';
+
+const SOURCE_LABELS = { admin: 'Admin', delivery_webhook: 'Courier', system: 'System' };
+
+const EMPTY_SHIPMENT = { courier_name: '', tracking_number: '', tracking_url: '' };
+
+const describeEvent = (e) => {
+  if (e.from_status && e.to_status) {
+    const move = `${STATUS_LABELS[e.from_status] || e.from_status} → ${STATUS_LABELS[e.to_status] || e.to_status}`;
+    const courier = e.event !== e.to_status && EVENT_LABELS[e.event];
+    return courier ? `${move} · ${courier}` : move;
+  }
+  return EVENT_LABELS[e.event] || e.event;
+};
+
 export const ProductOrders = () => {
   const [statusFilter, setStatusFilter] = useState('');
   const { currentPage, onPageChange, pageSize } = usePagination(statusFilter);
   const { data: ordersData, isLoading } = useGetAllProductOrdersQuery();
-  const [updateOrderStatus] = useUpdateProductOrderStatusMutation();
-  
+  const [updateOrderStatus, { isLoading: isUpdatingStatus }] = useUpdateProductOrderStatusMutation();
+  const [updateShipment, { isLoading: isSavingShipment }] = useUpdateProductOrderShipmentMutation();
+  const [markRefunded, { isLoading: isMarkingRefunded }] = useMarkProductOrderRefundedMutation();
+  const [refundReference, setRefundReference] = useState('');
+
   const orders = ordersData || [];
-  
+
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [newStatus, setNewStatus] = useState('');
+  const [shipment, setShipment] = useState(EMPTY_SHIPMENT);
+  const [restock, setRestock] = useState(true);
+  const { data: events = [] } = useGetProductOrderEventsQuery(selectedOrder?.id, {
+    skip: !isViewModalOpen || !selectedOrder?.id,
+  });
 
   const handleViewOrder = (order) => {
     setSelectedOrder(order);
     setNewStatus(order.status);
+    setShipment({
+      courier_name: order.courier_name || '',
+      tracking_number: order.tracking_number || '',
+      tracking_url: order.tracking_url || '',
+    });
+    setRestock(true);
+    setRefundReference('');
     setIsViewModalOpen(true);
   };
 
+  /** Only the filled-in shipment fields (blank = leave as is). */
+  const shipmentPayload = () =>
+    Object.fromEntries(
+      Object.entries(shipment)
+        .map(([k, v]) => [k, v.trim()])
+        .filter(([, v]) => v !== '')
+    );
+
   const handleUpdateStatus = async () => {
     try {
-      await updateOrderStatus({ 
-        orderId: selectedOrder.id, 
-        status: newStatus 
+      const res = await updateOrderStatus({
+        orderId: selectedOrder.id,
+        status: newStatus,
+        ...(newStatus === 'shipped' || newStatus === 'delivered' ? shipmentPayload() : {}),
+        ...(newStatus === 'cancelled' ? { restock } : {}),
       }).unwrap();
-      toast.success('Order status updated successfully');
+      toast.success(
+        res?.stock_restored
+          ? 'Order cancelled — items returned to stock'
+          : 'Order status updated successfully'
+      );
+      if (res?.refund_required) {
+        toast.warn('This order was paid. Refund the customer from the Razorpay dashboard.', {
+          autoClose: false,
+        });
+      }
       setIsViewModalOpen(false);
     } catch (error) {
       toast.error(error?.data?.detail || 'Failed to update order status');
+    }
+  };
+
+  const handleMarkRefunded = async () => {
+    if (!window.confirm(
+      `Mark order ${selectedOrder.order_number} as refunded? Do this only after the refund `
+      + 'has gone through in the Razorpay dashboard. This does not send any money.'
+    )) return;
+    try {
+      const res = await markRefunded({
+        orderId: selectedOrder.id,
+        refund_reference: refundReference.trim() || undefined,
+      }).unwrap();
+      setSelectedOrder((prev) => ({ ...prev, ...res.order }));
+      toast.success('Refund recorded');
+    } catch (error) {
+      toast.error(error?.data?.detail || 'Failed to record the refund');
+    }
+  };
+
+  const handleSaveShipment = async () => {
+    try {
+      const res = await updateShipment({ orderId: selectedOrder.id, ...shipmentPayload() }).unwrap();
+      setSelectedOrder((prev) => ({ ...prev, ...res.order }));
+      toast.success('Tracking details saved');
+    } catch (error) {
+      toast.error(error?.data?.detail || 'Failed to save tracking details');
     }
   };
 
@@ -55,6 +172,17 @@ export const ProductOrders = () => {
     filteredOrders.length,
     pageSize
   );
+
+  const nextStatuses = selectedOrder ? NEXT_STATUSES[selectedOrder.status] || [] : [];
+  const statusOptions = selectedOrder
+    ? [selectedOrder.status, ...nextStatuses].map((v) => ({
+        value: v,
+        label: v === selectedOrder.status ? `${STATUS_LABELS[v] || v} (current)` : STATUS_LABELS[v] || v,
+      }))
+    : [];
+  const isShippedOrDelivered = ['shipped', 'delivered'].includes(selectedOrder?.status);
+  const showShipmentFields = selectedOrder && (newStatus === 'shipped' || isShippedOrDelivered);
+  const canSaveShipmentOnly = selectedOrder && newStatus === selectedOrder.status && isShippedOrDelivered;
 
   const columns = [
     {
@@ -70,7 +198,7 @@ export const ProductOrders = () => {
       cell: (row) => {
         const profile = row.profiles || {};
         const role = profile.user_role || 'customer';
-        
+
         const roleConfig = {
           vendor: { variant: 'success', label: 'Vendor' },
           regular_buyer: { variant: 'primary', label: 'Regular Buyer' },
@@ -78,7 +206,7 @@ export const ProductOrders = () => {
           admin: { variant: 'danger', label: 'Admin' },
           customer: { variant: 'default', label: 'User' },
         };
-        
+
         const config = roleConfig[role] || roleConfig.customer;
 
         return (
@@ -114,28 +242,37 @@ export const ProductOrders = () => {
     },
     {
       header: 'Status',
-      cell: (row) => <StatusBadge status={row.status} />,
+      cell: (row) => (
+        <div>
+          <StatusBadge status={row.status} />
+          {isRefundOwed(row) && (
+            <div className="mt-1">
+              <Badge variant="danger" size="sm">Refund needed</Badge>
+            </div>
+          )}
+          {row.payment_status === 'refunded' && (
+            <div className="mt-1">
+              <Badge variant="default" size="sm">Refunded</Badge>
+            </div>
+          )}
+          {row.tracking_number && (
+            <div className="mt-1 text-xs text-gray-500">AWB {row.tracking_number}</div>
+          )}
+        </div>
+      ),
     },
     {
       header: 'Actions',
       cell: (row) => (
-        <Button 
-          size="sm" 
-          variant="outline" 
+        <Button
+          size="sm"
+          variant="outline"
           onClick={() => handleViewOrder(row)}
         >
           View & Update
         </Button>
       ),
     },
-  ];
-
-  const ORDER_STATUS_OPTIONS = [
-    { value: 'pending', label: 'Pending' },
-    { value: 'paid', label: 'Paid' },
-    { value: 'shipped', label: 'Shipped' },
-    { value: 'delivered', label: 'Delivered' },
-    { value: 'cancelled', label: 'Cancelled' },
   ];
 
   return (
@@ -180,9 +317,19 @@ export const ProductOrders = () => {
             <Button variant="outline" onClick={() => setIsViewModalOpen(false)}>
               Close
             </Button>
-            <Button variant="primary" onClick={handleUpdateStatus}>
-              Update Status
-            </Button>
+            {canSaveShipmentOnly ? (
+              <Button variant="primary" onClick={handleSaveShipment} disabled={isSavingShipment}>
+                {isSavingShipment ? 'Saving...' : 'Save Tracking'}
+              </Button>
+            ) : (
+              <Button
+                variant="primary"
+                onClick={handleUpdateStatus}
+                disabled={!selectedOrder || newStatus === selectedOrder.status || isUpdatingStatus}
+              >
+                {isUpdatingStatus ? 'Updating...' : 'Update Status'}
+              </Button>
+            )}
           </div>
         }
       >
@@ -194,13 +341,13 @@ export const ProductOrders = () => {
                 <div className="flex items-center gap-2 mt-1">
                   <p className="text-sm font-semibold">{selectedOrder.profiles?.full_name}</p>
                   {selectedOrder.profiles?.user_role && (
-                    <Badge 
+                    <Badge
                       variant={
                         selectedOrder.profiles.user_role === 'vendor' ? 'success' :
                         selectedOrder.profiles.user_role === 'regular_buyer' ? 'primary' :
                         selectedOrder.profiles.user_role === 'relationship_manager' ? 'info' :
                         selectedOrder.profiles.user_role === 'admin' ? 'danger' : 'default'
-                      } 
+                      }
                       size="sm"
                     >
                       {selectedOrder.profiles.user_role === 'customer' ? 'User' : selectedOrder.profiles.user_role.replace('_', ' ')}
@@ -262,14 +409,116 @@ export const ProductOrders = () => {
               </div>
             </div>
 
-            <div className="bg-blue-50 p-4 rounded-lg">
-              <Select
-                label="Update Order Status"
-                value={newStatus}
-                onChange={(e) => setNewStatus(e.target.value)}
-                options={ORDER_STATUS_OPTIONS}
-              />
+            <div className="bg-blue-50 p-4 rounded-lg space-y-4">
+              {nextStatuses.length > 0 ? (
+                <Select
+                  label="Update Order Status"
+                  value={newStatus}
+                  onChange={(e) => setNewStatus(e.target.value)}
+                  options={statusOptions}
+                />
+              ) : (
+                <p className="text-sm text-gray-700">
+                  This order is <strong>{STATUS_LABELS[selectedOrder.status] || selectedOrder.status}</strong>. No further status changes.
+                </p>
+              )}
+              {selectedOrder.status === 'pending' && (
+                <p className="text-xs text-gray-600">
+                  Awaiting payment. It becomes Paid automatically once the payment goes through.
+                </p>
+              )}
+
+              {showShipmentFields && (
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <Input
+                    label="Courier"
+                    value={shipment.courier_name}
+                    onChange={(e) => setShipment((s) => ({ ...s, courier_name: e.target.value }))}
+                    placeholder="e.g. Delhivery, own rider"
+                    maxLength={100}
+                  />
+                  <Input
+                    label="Tracking / AWB no."
+                    value={shipment.tracking_number}
+                    onChange={(e) => setShipment((s) => ({ ...s, tracking_number: e.target.value }))}
+                    maxLength={100}
+                  />
+                  <Input
+                    label="Tracking link"
+                    value={shipment.tracking_url}
+                    onChange={(e) => setShipment((s) => ({ ...s, tracking_url: e.target.value }))}
+                    placeholder="https://"
+                    maxLength={500}
+                  />
+                </div>
+              )}
+
+              {newStatus === 'cancelled' && selectedOrder.status !== 'cancelled' && selectedOrder.payment_status === 'completed' && (
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2 text-sm text-gray-700">
+                    <input
+                      type="checkbox"
+                      checked={restock}
+                      onChange={(e) => setRestock(e.target.checked)}
+                      className="h-4 w-4 rounded border-gray-300"
+                    />
+                    Return the items to stock
+                    {selectedOrder.status === 'shipped' && ' (only if the parcel is back at the warehouse)'}
+                  </label>
+                  <p className="text-xs text-amber-700">
+                    This order was paid. Cancelling does not refund it. Refund from the Razorpay dashboard.
+                  </p>
+                </div>
+              )}
             </div>
+
+            {isRefundOwed(selectedOrder) && (
+              <div className="rounded-md border border-red-200 bg-red-50 p-4 space-y-3">
+                <div>
+                  <h4 className="text-sm font-semibold text-red-800">Refund needed: ₹{selectedOrder.total_amount}</h4>
+                  <p className="mt-1 text-xs text-red-700">
+                    This order was cancelled but its payment went through
+                    {selectedOrder.razorpay_payment_id && ` (${selectedOrder.razorpay_payment_id})`}.
+                    Refund it in the Razorpay dashboard, then record it here.
+                  </p>
+                </div>
+                <div className="flex flex-col sm:flex-row sm:items-end gap-3">
+                  <div className="flex-1">
+                    <Input
+                      label="Razorpay refund ID (optional)"
+                      value={refundReference}
+                      onChange={(e) => setRefundReference(e.target.value)}
+                      placeholder="rfnd_..."
+                      maxLength={100}
+                    />
+                  </div>
+                  <Button variant="primary" onClick={handleMarkRefunded} disabled={isMarkingRefunded}>
+                    {isMarkingRefunded ? 'Saving...' : 'Mark refunded'}
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {selectedOrder.payment_status === 'refunded' && (
+              <p className="text-sm text-gray-600">Payment refunded. See the timeline for who recorded it and when.</p>
+            )}
+
+            {events.length > 0 && (
+              <div>
+                <h4 className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-2">Timeline</h4>
+                <ol className="space-y-2 border-l border-gray-200 pl-4">
+                  {events.map((e) => (
+                    <li key={e.id} className="text-sm">
+                      <div className="text-gray-900">{describeEvent(e)}</div>
+                      <div className="text-xs text-gray-500">
+                        {format(new Date(e.created_at), 'dd MMM yyyy, HH:mm')} · {SOURCE_LABELS[e.source] || e.source}
+                        {e.note && ` · ${e.note}`}
+                      </div>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            )}
           </div>
         )}
       </Modal>
