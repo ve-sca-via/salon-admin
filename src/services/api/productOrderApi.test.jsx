@@ -74,11 +74,36 @@ describe('updateProductOrderStatus', () => {
 });
 
 // =====================================================================
+// POST /admin/product-orders/{orderId}/mark-refunded
+// =====================================================================
+describe('markProductOrderRefunded', () => {
+  it('POSTs the refund reference to /admin/product-orders/{orderId}/mark-refunded', async () => {
+    let seenPath = null;
+    let body = null;
+    server.use(
+      http.post(`${BASE}/:orderId/mark-refunded`, async ({ request }) => {
+        seenPath = new URL(request.url).pathname;
+        body = await request.json();
+        return HttpResponse.json({ success: true, changed: true, order: { id: 'o1', payment_status: 'refunded' } });
+      })
+    );
+
+    const res = await store.dispatch(
+      productOrderApi.endpoints.markProductOrderRefunded.initiate({ orderId: 'o1', refund_reference: 'rfnd_1' })
+    );
+    expect(seenPath).toBe('/api/v1/admin/product-orders/o1/mark-refunded');
+    expect(body).toEqual({ refund_reference: 'rfnd_1' });
+    expect(res.data.order.payment_status).toBe('refunded');
+  });
+});
+
+// =====================================================================
 // Wiring
 // =====================================================================
 describe('exports', () => {
   it('exposes both admin product-order hooks', () => {
     expect(orderApiModule.useGetAllProductOrdersQuery).toBeTypeOf('function');
     expect(orderApiModule.useUpdateProductOrderStatusMutation).toBeTypeOf('function');
+    expect(orderApiModule.useMarkProductOrderRefundedMutation).toBeTypeOf('function');
   });
 });

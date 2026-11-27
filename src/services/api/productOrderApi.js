@@ -36,6 +36,18 @@ export const productOrderApi = createApi({
         { type: 'ProductOrderEvents', id: orderId },
       ],
     }),
+    // Records a refund already done in the Razorpay dashboard (moves no money).
+    markProductOrderRefunded: builder.mutation({
+      query: ({ orderId, refund_reference, note }) => ({
+        url: `/api/v1/admin/product-orders/${orderId}/mark-refunded`,
+        method: 'post',
+        data: { refund_reference, note },
+      }),
+      invalidatesTags: (result, error, { orderId }) => [
+        'ProductOrders',
+        { type: 'ProductOrderEvents', id: orderId },
+      ],
+    }),
     getProductOrderEvents: builder.query({
       query: (orderId) => ({
         url: `/api/v1/admin/product-orders/${orderId}/events`,
@@ -52,4 +64,5 @@ export const {
   useUpdateProductOrderStatusMutation,
   useUpdateProductOrderShipmentMutation,
   useGetProductOrderEventsQuery,
+  useMarkProductOrderRefundedMutation,
 } = productOrderApi;

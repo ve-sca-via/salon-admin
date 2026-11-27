@@ -4,6 +4,7 @@ import {
   useUpdateProductOrderStatusMutation,
   useUpdateProductOrderShipmentMutation,
   useGetProductOrderEventsQuery,
+  useMarkProductOrderRefundedMutation,
 } from '../services/api/productOrderApi';
 import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
@@ -50,7 +51,11 @@ const EVENT_LABELS = {
   shipment_cancelled: 'Shipment cancelled by courier',
   // Payment events (backend ProductOrderService._settle_payment).
   paid_after_cancel: 'Payment received after cancellation: refund it in Razorpay',
+  refunded: 'Marked refunded',
 };
+
+/** A cancelled order whose payment went through and hasn't been refunded yet. */
+const isRefundOwed = (order) => order?.status === 'cancelled' && order?.payment_status === 'completed';
 
 const SOURCE_LABELS = { admin: 'Admin', delivery_webhook: 'Courier', system: 'System' };
 
@@ -71,6 +76,8 @@ export const ProductOrders = () => {
   const { data: ordersData, isLoading } = useGetAllProductOrdersQuery();
   const [updateOrderStatus, { isLoading: isUpdatingStatus }] = useUpdateProductOrderStatusMutation();
   const [updateShipment, { isLoading: isSavingShipment }] = useUpdateProductOrderShipmentMutation();
+  const [markRefunded, { isLoading: isMarkingRefunded }] = useMarkProductOrderRefundedMutation();
+  const [refundReference, setRefundReference] = useState('');
 
   const orders = ordersData || [];
 
@@ -92,6 +99,7 @@ export const ProductOrders = () => {
       tracking_url: order.tracking_url || '',
     });
     setRestock(true);
+    setRefundReference('');
     setIsViewModalOpen(true);
   };
 
@@ -124,6 +132,23 @@ export const ProductOrders = () => {
       setIsViewModalOpen(false);
     } catch (error) {
       toast.error(error?.data?.detail || 'Failed to update order status');
+    }
+  };
+
+  const handleMarkRefunded = async () => {
+    if (!window.confirm(
+      `Mark order ${selectedOrder.order_number} as refunded? Do this only after the refund `
+      + 'has gone through in the Razorpay dashboard. This does not send any money.'
+    )) return;
+    try {
+      const res = await markRefunded({
+        orderId: selectedOrder.id,
+        refund_reference: refundReference.trim() || undefined,
+      }).unwrap();
+      setSelectedOrder((prev) => ({ ...prev, ...res.order }));
+      toast.success('Refund recorded');
+    } catch (error) {
+      toast.error(error?.data?.detail || 'Failed to record the refund');
     }
   };
 
@@ -220,9 +245,14 @@ export const ProductOrders = () => {
       cell: (row) => (
         <div>
           <StatusBadge status={row.status} />
-          {row.status === 'cancelled' && row.payment_status === 'completed' && (
+          {isRefundOwed(row) && (
             <div className="mt-1">
               <Badge variant="danger" size="sm">Refund needed</Badge>
+            </div>
+          )}
+          {row.payment_status === 'refunded' && (
+            <div className="mt-1">
+              <Badge variant="default" size="sm">Refunded</Badge>
             </div>
           )}
           {row.tracking_number && (
@@ -441,6 +471,37 @@ export const ProductOrders = () => {
                 </div>
               )}
             </div>
+
+            {isRefundOwed(selectedOrder) && (
+              <div className="rounded-md border border-red-200 bg-red-50 p-4 space-y-3">
+                <div>
+                  <h4 className="text-sm font-semibold text-red-800">Refund needed: ₹{selectedOrder.total_amount}</h4>
+                  <p className="mt-1 text-xs text-red-700">
+                    This order was cancelled but its payment went through
+                    {selectedOrder.razorpay_payment_id && ` (${selectedOrder.razorpay_payment_id})`}.
+                    Refund it in the Razorpay dashboard, then record it here.
+                  </p>
+                </div>
+                <div className="flex flex-col sm:flex-row sm:items-end gap-3">
+                  <div className="flex-1">
+                    <Input
+                      label="Razorpay refund ID (optional)"
+                      value={refundReference}
+                      onChange={(e) => setRefundReference(e.target.value)}
+                      placeholder="rfnd_..."
+                      maxLength={100}
+                    />
+                  </div>
+                  <Button variant="primary" onClick={handleMarkRefunded} disabled={isMarkingRefunded}>
+                    {isMarkingRefunded ? 'Saving...' : 'Mark refunded'}
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {selectedOrder.payment_status === 'refunded' && (
+              <p className="text-sm text-gray-600">Payment refunded. See the timeline for who recorded it and when.</p>
+            )}
 
             {events.length > 0 && (
               <div>
