@@ -11,7 +11,7 @@ import axiosBaseQuery from './baseQuery';
 export const productApi = createApi({
   reducerPath: 'productApi',
   baseQuery: axiosBaseQuery(),
-  tagTypes: ['Products', 'Product'],
+  tagTypes: ['Products', 'Product', 'StockMovements'],
   endpoints: (builder) => ({
 
     // ========================================
@@ -107,6 +107,30 @@ export const productApi = createApi({
     }),
 
     // ========================================
+    // INVENTORY — stock ledger (central warehouse)
+    // ========================================
+    adjustStock: builder.mutation({
+      query: ({ productId, change, reason, note }) => ({
+        url: `/api/v1/admin/inventory/${productId}/adjust`,
+        method: 'post',
+        data: { change, reason, ...(note ? { note } : {}) },
+      }),
+      invalidatesTags: (result, error, { productId }) => [
+        { type: 'Products', id: productId },
+        { type: 'Products', id: 'LIST' },
+        { type: 'StockMovements', id: productId },
+      ],
+    }),
+
+    getStockMovements: builder.query({
+      query: (productId) => ({
+        url: `/api/v1/admin/inventory/${productId}/movements`,
+        method: 'get',
+      }),
+      providesTags: (result, error, productId) => [{ type: 'StockMovements', id: productId }],
+    }),
+
+    // ========================================
     // UPLOAD PRODUCT IMAGE (via Supabase Storage)
     // ========================================
     uploadProductImage: builder.mutation({
@@ -130,4 +154,6 @@ export const {
   useUpdateProductMutation,
   useDeleteProductMutation,
   useUploadProductImageMutation,
+  useAdjustStockMutation,
+  useGetStockMovementsQuery,
 } = productApi;

@@ -27,6 +27,7 @@ import { Dropdown, DropdownItem, DropdownTrigger } from '../components/common/Dr
 import { toast } from 'react-toastify';
 import { usePagination } from '../hooks/usePagination';
 import { buildTablePagination } from '../utils/pagination';
+import { StockAdjustModal } from '../components/products/StockAdjustModal';
 
 
 // =====================================================
@@ -93,6 +94,9 @@ const Products = () => {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [form, setForm] = useState({ ...EMPTY_FORM });
   const [pendingFiles, setPendingFiles] = useState([]);
+  // Stock modal reads the live row from the list so it updates after each change.
+  const [stockProductId, setStockProductId] = useState(null);
+  const stockProduct = products.find((p) => p.id === stockProductId) || null;
 
   // ---- Helpers ----
   const resetForm = () => {
@@ -154,13 +158,17 @@ const Products = () => {
     });
   };
 
-  /** Build payload from form state */
-  const buildPayload = () => {
+  /**
+   * Build payload from form state. Stock is only sent on create (opening
+   * stock); after that it changes through the Stock modal so every change is
+   * recorded in the ledger and a sale mid-edit is never overwritten.
+   */
+  const buildPayload = ({ includeStock = false } = {}) => {
     const payload = {
       name: form.name.trim(),
       category: form.category.trim() || 'general',
       price: parseFloat(form.price),
-      stock_quantity: parseInt(form.stock_quantity, 10) || 0,
+      ...(includeStock && { stock_quantity: parseInt(form.stock_quantity, 10) || 0 }),
       is_active: form.is_active,
       is_featured: form.is_featured,
       image_urls: form.image_urls.filter((u) => u.trim() !== ''),
@@ -235,7 +243,7 @@ const Products = () => {
     if (!isFormValid) return;
     try {
       const newUrls = await uploadPendingFiles();
-      const payload = buildPayload();
+      const payload = buildPayload({ includeStock: true });
       payload.image_urls = [...payload.image_urls, ...newUrls];
 
       await createProduct(payload).unwrap();
@@ -379,9 +387,14 @@ const Products = () => {
     {
       header: 'Stock',
       cell: (row) => (
-        <span className={`font-medium ${row.stock_quantity <= 0 ? 'text-red-600' : row.stock_quantity <= 5 ? 'text-amber-600' : 'text-gray-700'}`}>
+        <button
+          type="button"
+          onClick={() => setStockProductId(row.id)}
+          title="Adjust stock / view history"
+          className={`font-medium underline decoration-dotted underline-offset-4 ${row.stock_quantity <= 0 ? 'text-red-600' : row.stock_quantity <= 5 ? 'text-amber-600' : 'text-gray-700'}`}
+        >
           {row.stock_quantity}
-        </span>
+        </button>
       ),
     },
     {
@@ -398,6 +411,7 @@ const Products = () => {
       cell: (row) => (
         <Dropdown trigger={<DropdownTrigger />}>
           <DropdownItem label="Edit" onClick={() => handleOpenEdit(row)} />
+          <DropdownItem label="Stock & history" onClick={() => setStockProductId(row.id)} />
           <DropdownItem
             label={row.is_active ? 'Deactivate' : 'Activate'}
             variant={row.is_active ? 'warning' : 'success'}
@@ -522,13 +536,31 @@ const Products = () => {
           onChange={(e) => updateField('weight', e.target.value)}
           placeholder="250ml, 100g"
         />
-        <Input
-          label="Stock Qty"
-          type="number"
-          min="0"
-          value={form.stock_quantity}
-          onChange={(e) => updateField('stock_quantity', e.target.value)}
-        />
+        {selectedProduct ? (
+          <div>
+            <span className="block text-sm font-medium text-gray-700 mb-1">Stock Qty</span>
+            <div className="flex items-center gap-2 py-2">
+              <span className="font-medium text-gray-900">
+                {(products.find((p) => p.id === selectedProduct.id) || selectedProduct).stock_quantity ?? 0}
+              </span>
+              <button
+                type="button"
+                onClick={() => setStockProductId(selectedProduct.id)}
+                className="text-xs font-medium text-orange-600 hover:text-orange-700 underline"
+              >
+                Adjust
+              </button>
+            </div>
+          </div>
+        ) : (
+          <Input
+            label="Opening Stock"
+            type="number"
+            min="0"
+            value={form.stock_quantity}
+            onChange={(e) => updateField('stock_quantity', e.target.value)}
+          />
+        )}
       </div>
 
       {/* Product Images */}
@@ -808,6 +840,12 @@ const Products = () => {
       >
         {productFormJSX}
       </Modal>
+
+      <StockAdjustModal
+        product={stockProduct}
+        isOpen={Boolean(stockProduct)}
+        onClose={() => setStockProductId(null)}
+      />
     </div>
   );
 };
