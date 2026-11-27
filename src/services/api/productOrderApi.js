@@ -4,7 +4,7 @@ import axiosBaseQuery from './baseQuery';
 export const productOrderApi = createApi({
   reducerPath: 'productOrderApi',
   baseQuery: axiosBaseQuery(),
-  tagTypes: ['ProductOrders'],
+  tagTypes: ['ProductOrders', 'ProductOrderEvents'],
   endpoints: (builder) => ({
     getAllProductOrders: builder.query({
       query: () => ({
@@ -13,13 +13,36 @@ export const productOrderApi = createApi({
       }),
       providesTags: ['ProductOrders'],
     }),
+    // extra: courier_name / tracking_number / tracking_url / restock / note
     updateProductOrderStatus: builder.mutation({
-      query: ({ orderId, status }) => ({
+      query: ({ orderId, status, ...extra }) => ({
         url: `/api/v1/admin/product-orders/${orderId}/status`,
         method: 'patch',
-        data: { status },
+        data: { status, ...extra },
       }),
-      invalidatesTags: ['ProductOrders'],
+      invalidatesTags: (result, error, { orderId }) => [
+        'ProductOrders',
+        { type: 'ProductOrderEvents', id: orderId },
+      ],
+    }),
+    updateProductOrderShipment: builder.mutation({
+      query: ({ orderId, ...fields }) => ({
+        url: `/api/v1/admin/product-orders/${orderId}/shipment`,
+        method: 'patch',
+        data: fields,
+      }),
+      invalidatesTags: (result, error, { orderId }) => [
+        'ProductOrders',
+        { type: 'ProductOrderEvents', id: orderId },
+      ],
+    }),
+    getProductOrderEvents: builder.query({
+      query: (orderId) => ({
+        url: `/api/v1/admin/product-orders/${orderId}/events`,
+        method: 'get',
+      }),
+      transformResponse: (res) => res?.events || [],
+      providesTags: (result, error, orderId) => [{ type: 'ProductOrderEvents', id: orderId }],
     }),
   }),
 });
@@ -27,4 +50,6 @@ export const productOrderApi = createApi({
 export const {
   useGetAllProductOrdersQuery,
   useUpdateProductOrderStatusMutation,
+  useUpdateProductOrderShipmentMutation,
+  useGetProductOrderEventsQuery,
 } = productOrderApi;
