@@ -48,6 +48,8 @@ const EVENT_LABELS = {
   rto_initiated: 'Returning to warehouse',
   rto_delivered: 'Returned to warehouse',
   shipment_cancelled: 'Shipment cancelled by courier',
+  // Payment events (backend ProductOrderService._settle_payment).
+  paid_after_cancel: 'Payment received after cancellation: refund it in Razorpay',
 };
 
 const SOURCE_LABELS = { admin: 'Admin', delivery_webhook: 'Courier', system: 'System' };
@@ -218,6 +220,11 @@ export const ProductOrders = () => {
       cell: (row) => (
         <div>
           <StatusBadge status={row.status} />
+          {row.status === 'cancelled' && row.payment_status === 'completed' && (
+            <div className="mt-1">
+              <Badge variant="danger" size="sm">Refund needed</Badge>
+            </div>
+          )}
           {row.tracking_number && (
             <div className="mt-1 text-xs text-gray-500">AWB {row.tracking_number}</div>
           )}
